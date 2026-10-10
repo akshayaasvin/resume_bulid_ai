@@ -1,6 +1,6 @@
 {
   "name": "resume-build-ai",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -13,7 +13,10 @@
     "db:migrate": "node scripts/db.mjs migrate",
     "db:seed": "node scripts/db.mjs seed",
     "secret-scan": "bash scripts/secret-scan.sh",
-    "test:rls": "vitest run -c vitest.rls.config.ts"
+    "test:rls": "vitest run -c vitest.rls.config.ts",
+    "test:e2e": "playwright test",
+    "load-test": "node scripts/load-test.mjs",
+    "local-stack": "node scripts/local-stack/start.mjs"
   },
   "engines": {
     "node": ">=18.18"
@@ -33,6 +36,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.48.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.19.43",
     "@types/pg": "^8.23.1",
