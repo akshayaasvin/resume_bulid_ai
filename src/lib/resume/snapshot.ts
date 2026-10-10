@@ -1,0 +1,84 @@
+import type { ScoringConfig } from '../config';
+import { isPublicScore, type Badge, type SkillLevel } from '../scoring';
+
+export interface ResumeSnapshot {
+  name: string;
+  nameTamil: string | null;
+  phone: string | null;
+  email: string | null;
+  college: string | null;
+  department: string | null;
+  year: number | null;
+  summary: string | null;
+  education: { institution: string; degree: string; field: string | null; years: string; score: string | null }[];
+  experience: { type: 'internship' | 'job' | 'project'; title: string; organization: string | null; period: string; bullets: string[] }[];
+  verifiedSkills: { name: string; level: SkillLevel; badge: Badge; scorePct: number }[];
+  otherSkills: string[];
+  generatedAt: string;
+}
+
+export interface SnapshotInput {
+  profile: {
+    full_name: string; name_tamil: string | null; phone_whatsapp: string | null; email: string | null;
+    department: string | null; year: number | null; summary: string | null;
+  };
+  college: string | null;
+  education: { institution: string; degree: string; field: string | null; start_year: number | null; end_year: number | null; score: string | null; sort: number }[];
+  experience: { type: 'internship' | 'job' | 'project'; title: string; organization: string | null; start_date: string | null; end_date: string | null; bullets: string[]; description: string | null; sort: number }[];
+  claimed: { skill_id: string | null; name: string }[];
+  scores: { skill_id: string; skill_name: string; score_pct: number; level: SkillLevel; badge: Badge }[];
+}
+
+const BADGE_ORDER: Record<Badge, number> = { campus_verified: 0, verified: 1, self: 2 };
+
+/**
+ * Builds what the resume shows. Scores below the beginner threshold are dropped entirely:
+ * not listed as verified, and the skill is also removed from "other skills" (no hint of a fail).
+ */
+export function buildSnapshot(input: SnapshotInput, cfg: ScoringConfig, now = new Date()): ResumeSnapshot {
+  const publicScores = input.scores.filter((s) => isPublicScore(Number(s.score_pct), cfg));
+  const testedIds = new Set(input.scores.map((s) => s.skill_id));
+  const testedNames = new Set(input.scores.map((s) => s.skill_name.toLowerCase()));
+
+  const verifiedSkills = publicScores
+    .map((s) => ({ name: s.skill_name, level: s.level, badge: s.badge, scorePct: Number(s.score_pct) }))
+    .sort((a, b) => BADGE_ORDER[a.badge] - BADGE_ORDER[b.badge] || b.scorePct - a.scorePct);
+
+  const otherSkills = input.claimed
+    .filter((c) => !(c.skill_id && testedIds.has(c.skill_id)) && !testedNames.has(c.name.toLowerCase()))
+    .map((c) => c.name);
+
+  const period = (a: string | null, b: string | null) => [a, b].filter(Boolean).join(' – ');
+
+  return {
+    name: input.profile.full_name,
+    nameTamil: input.profile.name_tamil,
+    phone: input.profile.phone_whatsapp,
+    email: input.profile.email,
+    college: input.college,
+    department: input.profile.department,
+    year: input.profile.year,
+    summary: input.profile.summary,
+    education: [...input.education]
+      .sort((a, b) => a.sort - b.sort)
+      .map((e) => ({
+        institution: e.institution,
+        degree: e.degree,
+        field: e.field,
+        years: period(e.start_year?.toString() ?? null, e.end_year?.toString() ?? null),
+        score: e.score,
+      })),
+    experience: [...input.experience]
+      .sort((a, b) => a.sort - b.sort)
+      .map((x) => ({
+        type: x.type,
+        title: x.title,
+        organization: x.organization,
+        period: period(x.start_date, x.end_date),
+        bullets: x.bullets.length ? x.bullets : (x.description ?? '').split('\n').map((s) => s.trim()).filter(Boolean),
+      })),
+    verifiedSkills,
+    otherSkills,
+    generatedAt: now.toISOString(),
+  };
+}
