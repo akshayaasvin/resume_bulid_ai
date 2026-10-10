@@ -1,0 +1,83 @@
+[
+  { "key": "py-e01", "type": "mcq", "difficulty": 1, "body": "What does this print?\n\nprint(type(3 / 2))", "options": ["<class 'int'>", "<class 'float'>", "<class 'decimal'>", "<class 'fraction'>"], "correct": 1, "explanation": "In Python 3, / always returns a float." },
+  { "key": "py-e02", "type": "mcq", "difficulty": 1, "body": "Which keyword is used to define a function in Python?", "options": ["func", "function", "def", "define"], "correct": 2 },
+  { "key": "py-e03", "type": "mcq", "difficulty": 1, "body": "What is the value of len(\"hello\")?", "options": ["4", "5", "6", "Error"], "correct": 1 },
+  { "key": "py-e04", "type": "mcq", "difficulty": 1, "body": "Which of these types is mutable (can be changed after creation)?", "options": ["tuple", "str", "int", "list"], "correct": 3 },
+  { "key": "py-e05", "type": "mcq", "difficulty": 1, "body": "What does \"abc\"[1] return?", "options": ["'a'", "'b'", "'c'", "IndexError"], "correct": 1, "explanation": "Indexing starts at 0." },
+  { "key": "py-e06", "type": "mcq", "difficulty": 1, "body": "What does print(2 ** 3) output?", "options": ["6", "9", "8", "5"], "correct": 2 },
+  { "key": "py-e07", "type": "mcq", "difficulty": 1, "body": "Which symbol starts a single-line comment in Python?", "options": ["//", "#", "--", "/*"], "correct": 1 },
+  { "key": "py-e08", "type": "mcq", "difficulty": 1, "body": "What is the result of 7 // 2 ?", "options": ["3.5", "4", "3", "1"], "correct": 2, "explanation": "// is floor division." },
+  { "key": "py-e09", "type": "mcq", "difficulty": 1, "body": "What is bool(\"\") ?", "options": ["True", "False", "None", "Error"], "correct": 1, "explanation": "Empty strings are falsy." },
+  {
+    "key": "py-e10", "type": "code_python", "difficulty": 1, "marks": 2,
+    "body": "Write a function square(n) that returns n multiplied by itself.\n\nExample: square(3) returns 9.",
+    "starter_code": "def square(n):\n    # return n multiplied by itself\n    pass\n",
+    "test_cases": [
+      { "call": "square(3)", "expected": "9" },
+      { "call": "square(-4)", "expected": "16" },
+      { "call": "square(0)", "expected": "0" },
+      { "call": "square(2.5)", "expected": "6.25" }
+    ]
+  },
+
+  { "key": "py-m01", "type": "mcq", "difficulty": 2, "body": "What does this print?\n\nx = [1, 2, 3]\ny = x\ny.append(4)\nprint(len(x))", "options": ["3", "4", "Error", "None"], "correct": 1, "explanation": "y and x refer to the same list." },
+  { "key": "py-m02", "type": "mcq", "difficulty": 2, "body": "What is list(range(2, 10, 3)) ?", "options": ["[2, 5, 8, 11]", "[3, 6, 9]", "[2, 5, 8]", "[2, 4, 6, 8]"], "correct": 2 },
+  { "key": "py-m03", "type": "mcq", "difficulty": 2, "body": "d = {'a': 1}\nWhat does d.get('k', 0) return?", "options": ["KeyError", "None", "0", "''"], "correct": 2 },
+  { "key": "py-m04", "type": "mcq", "difficulty": 2, "body": "Which expression creates an empty set?", "options": ["{}", "set()", "[]", "()"], "correct": 1, "explanation": "{} creates an empty dict." },
+  { "key": "py-m05", "type": "mcq", "difficulty": 2, "body": "What does \"a,b,c\".split(\",\") return?", "options": ["'abc'", "['a,b,c']", "('a', 'b', 'c')", "['a', 'b', 'c']"], "correct": 3 },
+  { "key": "py-m06", "type": "mcq", "difficulty": 2, "body": "What is [x * 2 for x in range(3)] ?", "options": ["[2, 4, 6]", "[0, 2, 4]", "[0, 1, 2]", "[1, 2, 3]"], "correct": 1 },
+  { "key": "py-m07", "type": "scenario", "difficulty": 2, "body": "You are reading 10,000 rows of student data and need to count how many students come from each city. Which data structure fits best?", "options": ["A list of city names, searched each time", "A dict (or collections.Counter) mapping city to count", "A tuple of cities", "One long string of all cities"], "correct": 1 },
+  { "key": "py-m08", "type": "mcq", "difficulty": 2, "body": "In a try / except / else / finally statement, which block always runs, whether or not an exception happened?", "options": ["try", "except", "else", "finally"], "correct": 3 },
+  { "key": "py-m09", "type": "mcq", "difficulty": 2, "body": "What does sorted([3, 1, 2], reverse=True) return?", "options": ["[1, 2, 3]", "[3, 2, 1]", "None", "[3, 1, 2]"], "correct": 1 },
+  { "key": "py-m10", "type": "mcq", "difficulty": 2, "body": "def f(a, b=2):\n    return a + b\n\nWhat is f(3)?", "options": ["3", "Error: missing argument", "5", "2"], "correct": 2 },
+  {
+    "key": "py-m11", "type": "code_python", "difficulty": 2, "marks": 2,
+    "body": "Write a function count_vowels(s) that returns how many vowels (a, e, i, o, u) are in the string s. Count uppercase and lowercase.\n\nExample: count_vowels('Hello World') returns 3.",
+    "starter_code": "def count_vowels(s):\n    pass\n",
+    "test_cases": [
+      { "call": "count_vowels('Hello World')", "expected": "3" },
+      { "call": "count_vowels('AEIOU xyz')", "expected": "5" },
+      { "call": "count_vowels('')", "expected": "0" },
+      { "call": "count_vowels('Python')", "expected": "1" }
+    ]
+  },
+  {
+    "key": "py-m12", "type": "code_python", "difficulty": 2, "marks": 2,
+    "body": "Write a function second_largest(nums) that returns the second largest DISTINCT number in the list. The list always has at least two different numbers.\n\nExample: second_largest([4, 1, 7, 7, 3]) returns 4.",
+    "starter_code": "def second_largest(nums):\n    pass\n",
+    "test_cases": [
+      { "call": "second_largest([4, 1, 7, 7, 3])", "expected": "4" },
+      { "call": "second_largest([10, 20])", "expected": "10" },
+      { "call": "second_largest([5, 5, 2, 9, 9, 8])", "expected": "8" },
+      { "call": "second_largest([-1, -5, -3])", "expected": "-3" }
+    ]
+  },
+
+  { "key": "py-h01", "type": "mcq", "difficulty": 3, "body": "What does this print?\n\ndef add(item, bucket=[]):\n    bucket.append(item)\n    return bucket\n\nadd(1)\nprint(add(2))", "options": ["[2]", "[1, 2]", "Error", "[]"], "correct": 1, "explanation": "The default list is created once and shared between calls." },
+  { "key": "py-h02", "type": "mcq", "difficulty": 3, "body": "What is the value of:\n\n[i for i in range(10) if i % 3 == 0][-1]", "options": ["6", "3", "9", "0"], "correct": 2 },
+  { "key": "py-h03", "type": "mcq", "difficulty": 3, "body": "Which statement about Python generators is true?", "options": ["They store all values in memory at once", "They produce values lazily, one at a time, using yield", "They cannot be used in a for loop", "They are the same as lists"], "correct": 1 },
+  { "key": "py-h04", "type": "mcq", "difficulty": 3, "body": "What does this print?\n\na = (1, [2, 3])\na[1].append(4)\nprint(a)", "options": ["TypeError: tuples are immutable", "(1, [2, 3])", "(1, [2, 3, 4])", "(1, 2, 3, 4)"], "correct": 2, "explanation": "The tuple holds a reference to a list; the list itself can change." },
+  { "key": "py-h05", "type": "mcq", "difficulty": 3, "body": "What is the average time complexity of checking x in my_set for a Python set?", "options": ["O(n)", "O(log n)", "O(n log n)", "O(1)"], "correct": 3 },
+  { "key": "py-h06", "type": "scenario", "difficulty": 3, "body": "A recursive function fib(n) becomes extremely slow for n = 35 because it recomputes the same values again and again. What is the quickest effective fix?", "options": ["Wrap it in a while True loop", "Memoize it, e.g. with @functools.lru_cache", "Convert the result to a string", "Add print statements to see progress"], "correct": 1 },
+  {
+    "key": "py-h07", "type": "code_python", "difficulty": 3, "marks": 3,
+    "body": "Write a function is_palindrome(s) that returns True if s reads the same forwards and backwards, ignoring case and ignoring anything that is not a letter or digit. Otherwise return False.\n\nExample: is_palindrome('A man, a plan, a canal: Panama') returns True.",
+    "starter_code": "def is_palindrome(s):\n    pass\n",
+    "test_cases": [
+      { "call": "is_palindrome('A man, a plan, a canal: Panama')", "expected": "True" },
+      { "call": "is_palindrome('race a car')", "expected": "False" },
+      { "call": "is_palindrome('')", "expected": "True" },
+      { "call": "is_palindrome('No lemon, no melon')", "expected": "True" }
+    ]
+  },
+  {
+    "key": "py-h08", "type": "code_python", "difficulty": 3, "marks": 3,
+    "body": "Write a function top_words(text, k) that returns the k most frequent words as a list of (word, count) tuples.\n- Treat words case-insensitively (convert to lowercase).\n- Words are separated by whitespace.\n- Sort by count (highest first); break ties alphabetically.\n\nExample: top_words('the cat and the hat and the bat', 2) returns [('the', 3), ('and', 2)].",
+    "starter_code": "def top_words(text, k):\n    pass\n",
+    "test_cases": [
+      { "call": "top_words('the cat and the hat and the bat', 2)", "expected": "[('the', 3), ('and', 2)]" },
+      { "call": "top_words('b a b a c', 3)", "expected": "[('a', 2), ('b', 2), ('c', 1)]" },
+      { "call": "top_words('Hi hi HI', 1)", "expected": "[('hi', 3)]" }
+    ]
+  }
+]

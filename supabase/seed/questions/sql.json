@@ -1,0 +1,59 @@
+[
+  { "key": "sql-e01", "type": "mcq", "difficulty": 1, "body": "Which SQL keyword is used to read data from a table?", "options": ["GET", "SELECT", "FETCH", "OPEN"], "correct": 1 },
+  { "key": "sql-e02", "type": "mcq", "difficulty": 1, "body": "Which clause filters rows before they are returned?", "options": ["ORDER BY", "GROUP BY", "WHERE", "LIMIT"], "correct": 2 },
+  { "key": "sql-e03", "type": "mcq", "difficulty": 1, "body": "Which keyword sorts results from highest to lowest?", "options": ["DOWN", "DESC", "REVERSE", "LOWER"], "correct": 1 },
+  { "key": "sql-e04", "type": "mcq", "difficulty": 1, "body": "Which keyword removes duplicate rows from a SELECT result?", "options": ["UNIQUE", "SINGLE", "DIFFERENT", "DISTINCT"], "correct": 3 },
+  { "key": "sql-e05", "type": "mcq", "difficulty": 1, "body": "What does COUNT(*) return?", "options": ["The sum of a column", "The number of rows", "The average value", "The largest value"], "correct": 1 },
+  { "key": "sql-e06", "type": "mcq", "difficulty": 1, "body": "In a LIKE pattern, which wildcard matches any sequence of characters?", "options": ["%", "*", "?", "#"], "correct": 0 },
+  { "key": "sql-e07", "type": "mcq", "difficulty": 1, "body": "Which statement adds new rows to a table?", "options": ["ADD", "UPDATE", "INSERT", "CREATE"], "correct": 2 },
+  { "key": "sql-e08", "type": "mcq", "difficulty": 1, "body": "A PRIMARY KEY column must be:", "options": ["Unique and not NULL", "Allowed to be NULL", "Allowed to have duplicates", "Text only"], "correct": 0 },
+  { "key": "sql-e09", "type": "mcq", "difficulty": 1, "body": "How do you correctly check whether a column has no value?", "options": ["col = NULL", "col == NULL", "col IS NULL", "col EMPTY"], "correct": 2 },
+  {
+    "key": "sql-e10", "type": "sql_query", "difficulty": 1, "marks": 2, "sql_seed": "students",
+    "body": "Table students(id, name, dept, city, marks).\n\nList the names of students in the 'CSE' department, sorted by name from A to Z. Return only the name column.",
+    "starter_code": "SELECT name\nFROM students\n",
+    "test_cases": [{ "expected": [["Arun"], ["Karthik"], ["Priya"], ["Vijay"]], "ordered": true }]
+  },
+
+  { "key": "sql-m01", "type": "mcq", "difficulty": 2, "body": "Which clause filters groups after GROUP BY?", "options": ["WHERE", "HAVING", "FILTER", "ON"], "correct": 1 },
+  { "key": "sql-m02", "type": "mcq", "difficulty": 2, "body": "What does an INNER JOIN return?", "options": ["All rows from the left table", "Only rows that have a match in both tables", "All rows from both tables", "Only rows with no match"], "correct": 1 },
+  { "key": "sql-m03", "type": "mcq", "difficulty": 2, "body": "In a LEFT JOIN, if a left row has no matching right row, the right table's columns are:", "options": ["0", "An empty string", "NULL", "The row is removed"], "correct": 2 },
+  { "key": "sql-m04", "type": "mcq", "difficulty": 2, "body": "What does this return?\n\nSELECT dept, AVG(marks) FROM students GROUP BY dept;", "options": ["One row per student", "One row per department with its average marks", "A single row with the overall average", "An error"], "correct": 1 },
+  { "key": "sql-m05", "type": "mcq", "difficulty": 2, "body": "Logically, which of these is processed FIRST in a query?", "options": ["SELECT", "WHERE", "ORDER BY", "LIMIT"], "correct": 1 },
+  { "key": "sql-m06", "type": "mcq", "difficulty": 2, "body": "marks BETWEEN 50 AND 60 includes which values?", "options": ["Only 51 to 59", "50 to 60, including both", "51 to 60", "50 to 59"], "correct": 1 },
+  { "key": "sql-m07", "type": "mcq", "difficulty": 2, "body": "Which statement about COUNT(col) and COUNT(*) is true?", "options": ["They always return the same number", "COUNT(col) skips rows where col is NULL", "COUNT(*) skips rows containing any NULL", "COUNT(col) counts only distinct values"], "correct": 1 },
+  { "key": "sql-m08", "type": "scenario", "difficulty": 2, "body": "Your manager wants the 3 highest-paid employees from table employees(name, salary). Which query pattern is right?", "options": ["ORDER BY salary DESC LIMIT 3", "ORDER BY salary LIMIT 3", "WHERE salary = MAX(salary)", "GROUP BY salary LIMIT 3"], "correct": 0 },
+  { "key": "sql-m09", "type": "mcq", "difficulty": 2, "body": "Which of these is NOT an aggregate function?", "options": ["SUM", "AVG", "ROUND", "MAX"], "correct": 2 },
+  { "key": "sql-m10", "type": "mcq", "difficulty": 2, "body": "What happens when you run UPDATE students SET marks = 90; with no WHERE clause?", "options": ["Nothing is updated", "Every row is updated", "It is a syntax error", "Only the first row is updated"], "correct": 1 },
+  {
+    "key": "sql-m11", "type": "sql_query", "difficulty": 2, "marks": 2, "sql_seed": "students",
+    "body": "Table students(id, name, dept, city, marks).\n\nShow each department and how many students it has. Return two columns: dept and total. Sort by dept (A to Z).",
+    "starter_code": "SELECT dept, COUNT(*) AS total\nFROM students\n",
+    "test_cases": [{ "expected": [["CSE", 4], ["ECE", 2], ["MECH", 2]], "ordered": true }]
+  },
+  {
+    "key": "sql-m12", "type": "sql_query", "difficulty": 2, "marks": 2, "sql_seed": "students",
+    "body": "Table students(id, name, dept, city, marks).\n\nList the name and marks of students who scored MORE than 80, highest marks first.",
+    "starter_code": "SELECT name, marks\nFROM students\n",
+    "test_cases": [{ "expected": [["Sneha", 95], ["Divya", 91], ["Priya", 88], ["Arun", 82]], "ordered": true }]
+  },
+
+  { "key": "sql-h01", "type": "mcq", "difficulty": 3, "body": "Which query finds students who scored above the class average?", "options": ["SELECT name FROM students WHERE marks > (SELECT AVG(marks) FROM students);", "SELECT name FROM students WHERE marks > AVG(marks);", "SELECT name FROM students HAVING marks > AVG;", "SELECT name FROM students GROUP BY id WHERE AVG(marks) < marks;"], "correct": 0 },
+  { "key": "sql-h02", "type": "mcq", "difficulty": 3, "body": "What is the difference between UNION and UNION ALL?", "options": ["UNION removes duplicate rows; UNION ALL keeps them", "UNION ALL removes duplicate rows; UNION keeps them", "There is no difference", "UNION ALL always sorts the result"], "correct": 0 },
+  { "key": "sql-h03", "type": "mcq", "difficulty": 3, "body": "Two students tie for the top mark. How do RANK() and ROW_NUMBER() differ?", "options": ["RANK() gives both rank 1 and skips 2; ROW_NUMBER() gives 1 and 2", "ROW_NUMBER() gives both 1; RANK() gives 1 and 2", "They behave identically", "RANK() never skips numbers"], "correct": 0 },
+  { "key": "sql-h04", "type": "scenario", "difficulty": 3, "body": "A query that joins orders (1 million rows) to customers on orders.customer_id has become slow. What should you try first?", "options": ["Add an index on orders.customer_id", "Change the query to SELECT *", "Remove the WHERE clause", "Store customer_id as text"], "correct": 0 },
+  { "key": "sql-h05", "type": "mcq", "difficulty": 3, "body": "Which normal form requires every column to hold a single (atomic) value with no repeating groups?", "options": ["1NF", "2NF", "3NF", "BCNF"], "correct": 0 },
+  { "key": "sql-h06", "type": "mcq", "difficulty": 3, "body": "What does COALESCE(a, b, c) return?", "options": ["The first non-NULL value among a, b, c", "The last value", "The sum of a, b and c", "NULL if any of them is NULL"], "correct": 0 },
+  {
+    "key": "sql-h07", "type": "sql_query", "difficulty": 3, "marks": 3, "sql_seed": "shop",
+    "body": "Tables customers(id, name, city) and orders(id, customer_id, amount, order_date).\n\nShow each customer's name and their total order amount as total_amount, only for customers who have at least one order. Highest total first.",
+    "starter_code": "SELECT c.name, SUM(o.amount) AS total_amount\nFROM customers c\n",
+    "test_cases": [{ "expected": [["Anand", 730], ["Chitra", 620], ["Bala", 150]], "ordered": true }]
+  },
+  {
+    "key": "sql-h08", "type": "sql_query", "difficulty": 3, "marks": 3, "sql_seed": "shop",
+    "body": "Tables customers(id, name, city) and orders(id, customer_id, amount, order_date).\n\nList the names of customers who have placed NO orders.",
+    "starter_code": "SELECT c.name\nFROM customers c\n",
+    "test_cases": [{ "expected": [["Deepa"]], "ordered": false }]
+  }
+]

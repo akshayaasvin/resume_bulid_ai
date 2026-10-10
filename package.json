@@ -12,8 +12,8 @@
     "test:watch": "vitest",
     "db:migrate": "node scripts/db.mjs migrate",
     "db:seed": "node scripts/db.mjs seed",
-    "db:reset": "node scripts/db.mjs reset",
-    "secret-scan": "bash scripts/secret-scan.sh"
+    "secret-scan": "bash scripts/secret-scan.sh",
+    "test:rls": "vitest run -c vitest.rls.config.ts"
   },
   "engines": {
     "node": ">=18.18"
@@ -46,6 +46,7 @@
     "eslint-config-next": "^14.2.35",
     "pg": "^8.23.1",
     "postcss": "^8.5.29",
+    "pyodide": "^0.26.4",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3",
     "vitest": "^2.1.9"

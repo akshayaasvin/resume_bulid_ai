@@ -72,7 +72,6 @@ do $$ declare t text; begin
     'config', 'jobs', 'applications', 'notifications', 'ai_usage', 'funnel_events'
   ] loop
     execute format('alter table %I enable row level security', t);
-    execute format('alter table %I force row level security', t);
   end loop;
 end $$;
 

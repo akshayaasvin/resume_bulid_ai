@@ -30,8 +30,8 @@ const BRAND = '#1e40af';
 const styles = StyleSheet.create({
   page: { padding: 36, fontFamily: 'NotoSans', fontSize: 10, color: '#0f172a', lineHeight: 1.35 },
   header: { borderBottomWidth: 2, borderBottomColor: BRAND, paddingBottom: 8 },
-  name: { fontSize: 20, fontWeight: 'bold' },
-  tamil: { fontFamily: 'NotoSansTamil', fontSize: 12, color: '#334155' },
+  name: { fontSize: 20, fontWeight: 'bold', lineHeight: 1.25 },
+  tamil: { fontFamily: 'NotoSansTamil', fontSize: 12, color: '#334155', lineHeight: 1.6, marginTop: 2 },
   muted: { color: '#475569' },
   section: { marginTop: 12 },
   h3: { fontSize: 9, fontWeight: 'bold', color: BRAND, letterSpacing: 1, marginBottom: 4, textTransform: 'uppercase' },

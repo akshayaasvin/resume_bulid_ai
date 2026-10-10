@@ -1,0 +1,23 @@
+{
+  "skills": [
+    { "slug": "python", "name": "Python", "category": "Programming", "assessment_type": "mixed", "file": "python.json" },
+    { "slug": "sql", "name": "SQL", "category": "Data", "assessment_type": "mixed", "file": "sql.json" },
+    { "slug": "excel", "name": "Excel", "category": "Office & Data", "assessment_type": "mcq", "file": "excel.json" },
+    { "slug": "communication", "name": "Communication", "category": "Soft skills", "assessment_type": "mcq", "file": "communication.json" },
+    { "slug": "digital-marketing", "name": "Digital Marketing", "category": "Marketing", "assessment_type": "mcq", "file": "digital-marketing.json" }
+  ],
+  "sqlSeeds": {
+    "students": "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT, dept TEXT, city TEXT, marks INTEGER);\nINSERT INTO students VALUES\n(1, 'Arun', 'CSE', 'Chennai', 82),\n(2, 'Divya', 'ECE', 'Madurai', 91),\n(3, 'Karthik', 'CSE', 'Coimbatore', 67),\n(4, 'Meena', 'MECH', 'Chennai', 74),\n(5, 'Priya', 'CSE', 'Madurai', 88),\n(6, 'Ravi', 'ECE', 'Chennai', 59),\n(7, 'Sneha', 'MECH', 'Trichy', 95),\n(8, 'Vijay', 'CSE', 'Chennai', 45);",
+    "shop": "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT);\nCREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER, amount REAL, order_date TEXT);\nINSERT INTO customers VALUES\n(1, 'Anand', 'Chennai'),\n(2, 'Bala', 'Madurai'),\n(3, 'Chitra', 'Chennai'),\n(4, 'Deepa', 'Salem');\nINSERT INTO orders VALUES\n(1, 1, 250.0, '2024-01-05'),\n(2, 1, 400.0, '2024-02-10'),\n(3, 2, 150.0, '2024-01-20'),\n(4, 3, 500.0, '2024-03-02'),\n(5, 3, 120.0, '2024-03-15'),\n(6, 1, 80.0, '2024-03-20');"
+  },
+  "demo": {
+    "college": { "name": "Demo College of Engineering", "city": "Chennai" },
+    "workshop": {
+      "batch_code": "DEMO-001",
+      "name": "Demo Workshop (demo only)",
+      "demo_pin": "1234",
+      "proctor_password": "demo1234",
+      "late_grace_minutes": 5
+    }
+  }
+}
