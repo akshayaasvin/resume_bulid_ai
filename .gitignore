@@ -1,0 +1,31 @@
+# deps
+node_modules/
+.pnp
+.pnp.js
+
+# next / build
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# env (never commit secrets)
+.env
+.env.*
+!.env.example
+
+# testing
+coverage/
+playwright-report/
+test-results/
+.load-results/
+
+# misc
+.DS_Store
+*.log
+npm-debug.log*
+.vercel
+supabase/.temp/
+supabase/.branches/
