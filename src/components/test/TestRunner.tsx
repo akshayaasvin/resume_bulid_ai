@@ -58,7 +58,7 @@ export function TestRunner({ attemptId, skillName, skillSlug }: { attemptId: str
           payload = await res.json();
           await cacheAttemptData(attemptId, payload);
         } else if (res.status === 404) {
-          router.replace('/dashboard');
+          router.replace('/test');
           return;
         }
       } catch { /* offline */ }

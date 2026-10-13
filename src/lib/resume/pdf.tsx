@@ -1,7 +1,7 @@
 import 'server-only';
 import path from 'node:path';
 import { Document, Font, Page, StyleSheet, Text, View, renderToBuffer } from '@react-pdf/renderer';
-import type { ResumeSnapshot } from './snapshot';
+import { headerLines, type ResumeSnapshot } from './snapshot';
 import { LEVEL_LABEL } from '../scoring';
 
 const fontDir = path.join(process.cwd(), 'public', 'fonts');
@@ -32,6 +32,7 @@ const styles = StyleSheet.create({
   header: { borderBottomWidth: 2, borderBottomColor: BRAND, paddingBottom: 8 },
   name: { fontSize: 20, fontWeight: 'bold', lineHeight: 1.25 },
   tamil: { fontFamily: 'NotoSansTamil', fontSize: 12, color: '#334155', lineHeight: 1.6, marginTop: 2 },
+  headline: { fontSize: 12, fontWeight: 'bold', color: BRAND, marginTop: 2 },
   muted: { color: '#475569' },
   section: { marginTop: 12 },
   h3: { fontSize: 9, fontWeight: 'bold', color: BRAND, letterSpacing: 1, marginBottom: 4, textTransform: 'uppercase' },
@@ -78,12 +79,14 @@ export function ResumeDocument({ s, showPct, version }: { s: ResumeSnapshot; sho
   const sub = [s.department, s.year ? `Year ${s.year}` : null, s.college].filter(Boolean).join('  ·  ');
   const work = s.experience.filter((x) => x.type !== 'project');
   const projects = s.experience.filter((x) => x.type === 'project');
+  const { headline, nameTamil } = headerLines(s);
   return (
     <Document title={`${s.name} - Resume`} author={s.name} creator="Resume Build AI">
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <Text style={styles.name}>{s.name}</Text>
-          {s.nameTamil ? <Text style={styles.tamil}>{s.nameTamil}</Text> : null}
+          {nameTamil ? <Text style={styles.tamil}>{nameTamil}</Text> : null}
+          {headline ? <Text style={styles.headline}>{headline}</Text> : null}
           {sub ? <Text style={styles.muted}>{sub}</Text> : null}
           {contact ? <Text style={styles.muted}>{contact}</Text> : null}
         </View>

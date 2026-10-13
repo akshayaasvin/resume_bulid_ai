@@ -111,7 +111,7 @@ export function Wizard({ userId, initial, startStep, catalog, done }: {
         setStep(step + 1);
         window.scrollTo({ top: 0 });
       } else {
-        router.push('/resume');
+        router.push('/test');
         router.refresh();
       }
     } catch {

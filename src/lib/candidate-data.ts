@@ -3,12 +3,23 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getConfig } from './server-config';
 import { isPublicScore, type Badge, type SkillLevel } from './scoring';
 
+/** What kind of questions a skill's test has (drives the label on the test hub). */
+export type TestKind = 'code' | 'situational' | 'mcq';
+
+interface CatalogSkill { id: string; slug: string; name: string; category: string; assessment_type: string }
+
+function testKind(s: CatalogSkill): TestKind {
+  if (s.assessment_type === 'mixed') return 'code';
+  return s.category === 'Soft skills' ? 'situational' : 'mcq';
+}
+
 export interface SkillOverviewRow {
   skillId: string | null;
   slug: string | null;
   name: string;
   claimed: boolean;
   testable: boolean;
+  kind: TestKind | null;
   score: { pct: number; level: SkillLevel; badge: Badge; public: boolean } | null;
 }
 
@@ -18,9 +29,9 @@ export async function skillOverview(supabase: SupabaseClient, profileId: string)
     getConfig('scoring'),
     supabase.from('claimed_skills').select('skill_id, name').eq('profile_id', profileId),
     supabase.from('skill_scores').select('skill_id, score_pct, level, badge').eq('profile_id', profileId),
-    supabase.from('skills').select('id, slug, name').eq('is_active', true).order('name'),
+    supabase.from('skills').select('id, slug, name, category, assessment_type').eq('is_active', true).order('name'),
   ]);
-  const cat = (catalog ?? []) as { id: string; slug: string; name: string }[];
+  const cat = (catalog ?? []) as CatalogSkill[];
   const byName = new Map(cat.map((c) => [c.name.toLowerCase(), c]));
   const byId = new Map(cat.map((c) => [c.id, c]));
   const scoreBy = new Map(((scores ?? []) as { skill_id: string; score_pct: number; level: SkillLevel; badge: Badge }[]).map((s) => [s.skill_id, s]));
@@ -37,6 +48,7 @@ export async function skillOverview(supabase: SupabaseClient, profileId: string)
       name: skill?.name ?? c.name,
       claimed: true,
       testable: !!skill,
+      kind: skill ? testKind(skill) : null,
       score: s ? { pct: Number(s.score_pct), level: s.level, badge: s.badge, public: isPublicScore(Number(s.score_pct), cfg) } : null,
     });
   }
@@ -46,7 +58,7 @@ export async function skillOverview(supabase: SupabaseClient, profileId: string)
     const skill = byId.get(skillId);
     seen.add(skillId);
     rows.push({
-      skillId, slug: skill?.slug ?? null, name: skill?.name ?? '?', claimed: false, testable: !!skill,
+      skillId, slug: skill?.slug ?? null, name: skill?.name ?? '?', claimed: false, testable: !!skill, kind: skill ? testKind(skill) : null,
       score: { pct: Number(s.score_pct), level: s.level, badge: s.badge, public: isPublicScore(Number(s.score_pct), cfg) },
     });
   }

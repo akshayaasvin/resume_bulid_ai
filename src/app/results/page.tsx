@@ -30,7 +30,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: { at
 
   return (
     <>
-      <AppHeader signedIn home="/dashboard" />
+      <AppHeader signedIn home="/test" />
       <main className="mx-auto max-w-2xl space-y-5 px-4 pb-16 pt-5">
         <h1 className="text-2xl font-bold">{t('results.title')}</h1>
         <PendingSubmitter />
@@ -104,7 +104,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: { at
         {verified.length > 0 && (
           <Link href="/resume" className="btn-primary w-full">{t('results.downloadResume')}</Link>
         )}
-        <Link href="/dashboard" className="btn-secondary w-full">{t('common.back')}</Link>
+        <Link href="/test" className="btn-secondary w-full">{t('hub.backToTests')}</Link>
       </main>
     </>
   );

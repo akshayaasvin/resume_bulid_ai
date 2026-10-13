@@ -4,6 +4,8 @@ import { isPublicScore, type Badge, type SkillLevel } from '../scoring';
 export interface ResumeSnapshot {
   name: string;
   nameTamil: string | null;
+  /** Target role shown under the name (role-based resumes). Absent on older snapshots. */
+  headline?: string | null;
   phone: string | null;
   email: string | null;
   college: string | null;
@@ -27,6 +29,19 @@ export interface SnapshotInput {
   experience: { type: 'internship' | 'job' | 'project'; title: string; organization: string | null; start_date: string | null; end_date: string | null; bullets: string[]; description: string | null; sort: number }[];
   claimed: { skill_id: string | null; name: string }[];
   scores: { skill_id: string; skill_name: string; score_pct: number; level: SkillLevel; badge: Badge }[];
+}
+
+const sameText = (a: string, b: string) => a.replace(/\s+/g, ' ').trim().toLowerCase() === b.replace(/\s+/g, ' ').trim().toLowerCase();
+
+/**
+ * Lines under the name in the resume header. Anything that just repeats the name is dropped,
+ * so a candidate who typed their English name into the Tamil-name field doesn't see it twice.
+ */
+export function headerLines(s: Pick<ResumeSnapshot, 'name' | 'nameTamil' | 'headline'>) {
+  const keep = (v: string | null | undefined) => (v && v.trim() && !sameText(v, s.name) ? v.trim() : null);
+  const headline = keep(s.headline);
+  const nameTamil = keep(s.nameTamil);
+  return { headline, nameTamil: nameTamil && headline && sameText(nameTamil, headline) ? null : nameTamil };
 }
 
 const BADGE_ORDER: Record<Badge, number> = { campus_verified: 0, verified: 1, self: 2 };

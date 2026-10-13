@@ -32,8 +32,8 @@ export async function completeWizard(page: Page, skill = 'Excel') {
   await page.getByRole('button', { name: 'Next' }).click();
   await expect(page.getByRole('heading', { name: 'Skills you have' })).toBeVisible();
   await page.getByRole('button', { name: skill, exact: true }).click();
-  await page.getByRole('button', { name: 'Finish & see my resume' }).click();
-  await page.waitForURL('**/resume');
+  await page.getByRole('button', { name: 'Finish & take my skill tests' }).click();
+  await page.waitForURL('**/test');
 }
 
 /** Correct option text per question id, straight from the DB (test-only shortcut). */

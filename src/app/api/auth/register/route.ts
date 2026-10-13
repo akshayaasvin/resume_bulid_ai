@@ -73,6 +73,7 @@ export async function POST(req: Request) {
     opt_in_at: input.whatsapp_opt_in ? new Date().toISOString() : null,
     language: input.language,
     wizard_step: 1,
+    current_step: 'wizard',
   });
   if (profileErr) {
     await admin.auth.admin.deleteUser(created.user.id);

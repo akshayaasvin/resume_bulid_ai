@@ -4,10 +4,16 @@ import { AppHeader } from '@/components/AppHeader';
 import { JoinCodeForm } from '@/components/JoinCodeForm';
 import { getT } from '@/i18n/server';
 import { getSession } from '@/lib/auth';
+import { STEP_HOME } from '@/lib/flow';
+import { syncFlowStep } from '@/lib/flow-server';
 
 export default async function Landing() {
   const session = await getSession().catch(() => null);
-  if (session) redirect(session.profile.wizard_step < 4 ? '/wizard' : '/dashboard');
+  if (session) {
+    redirect(session.profile.role === 'candidate'
+      ? STEP_HOME[await syncFlowStep(session.profile.id)]
+      : session.profile.wizard_step < 4 ? '/wizard' : '/dashboard');
+  }
   const { t } = getT();
   return (
     <>

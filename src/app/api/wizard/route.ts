@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { apiSession } from '@/lib/auth';
 import { createResumeVersion } from '@/lib/resume/versions';
 import { track } from '@/lib/funnel';
+import { syncFlowStep } from '@/lib/flow-server';
 
 const year = z.coerce.number().int().min(1950).max(2100).nullable().optional();
 const text = (max: number) => z.string().trim().max(max);
@@ -112,6 +113,7 @@ export async function PUT(req: Request) {
         resumeVersion = await createResumeVersion(uid, 'initial');
         await track(uid, 'profile_completed');
       }
+      await syncFlowStep(uid);
     }
     return Response.json({ ok: true, wizard_step: Math.max(nextStep, profile.wizard_step), resumeVersion });
   } catch (e) {

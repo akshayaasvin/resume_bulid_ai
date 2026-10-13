@@ -51,7 +51,7 @@ export function TestStart({ skillSlug, skillName, hasWorkshop, openAttemptId }: 
 
   return (
     <main className="mx-auto max-w-md px-4 py-6">
-      <Link href="/dashboard" className="text-sm text-brand-700">← {t('common.back')}</Link>
+      <Link href="/test" className="text-sm text-brand-700">← {t('common.back')}</Link>
       <h1 className="mt-3 text-2xl font-bold">{skillName}</h1>
       <p className="mt-2 text-slate-600">{t('test.rules')}</p>
       <div className="mt-3"><RunnerStatus kinds={[...kinds]} /></div>

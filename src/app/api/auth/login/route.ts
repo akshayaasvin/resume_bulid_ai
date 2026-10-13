@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { authEmailForPhone, normalizeIndianPhone } from '@/lib/phone';
 import { withBackoff } from '@/lib/retry';
+import { STEP_HOME } from '@/lib/flow';
+import { syncFlowStep } from '@/lib/flow-server';
 
 const schema = z.object({ phone: z.string().min(10).max(16), password: z.string().min(1).max(72) });
 
@@ -26,7 +28,6 @@ export async function POST(req: Request) {
     profile?.role === 'super_admin' ? '/admin'
     : profile?.role === 'college_admin' ? '/tpo'
     : profile?.role === 'employer' ? '/employer'
-    : (profile?.wizard_step ?? 0) < 4 ? '/wizard'
-    : '/dashboard';
+    : STEP_HOME[await syncFlowStep(data.user.id)];
   return Response.json({ ok: true, next });
 }

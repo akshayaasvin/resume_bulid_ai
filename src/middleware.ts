@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { gateRedirect, isFlowStep, stepForPath } from '@/lib/flow';
 
 const PROTECTED = ['/wizard', '/dashboard', '/test', '/results', '/resume', '/notifications', '/jobs', '/tpo', '/admin', '/employer'];
 
@@ -39,6 +40,17 @@ export async function middleware(request: NextRequest) {
     login.pathname = '/login';
     login.search = `?next=${encodeURIComponent(path)}`;
     return NextResponse.redirect(login);
+  }
+
+  // Funnel gating: candidates can't open a step they haven't reached yet.
+  if (user && stepForPath(path)) {
+    const { data } = await supabase.from('profiles').select('current_step').eq('id', user.id).maybeSingle();
+    const dest = gateRedirect(isFlowStep(data?.current_step) ? data.current_step : null, path);
+    if (dest) {
+      const redirect = NextResponse.redirect(new URL(dest, request.url));
+      response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+      return redirect;
+    }
   }
   return response;
 }

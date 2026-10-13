@@ -1,4 +1,4 @@
-import type { ResumeSnapshot } from '@/lib/resume/snapshot';
+import { headerLines, type ResumeSnapshot } from '@/lib/resume/snapshot';
 import { LEVEL_LABEL } from '@/lib/scoring';
 
 /** HTML preview. Mirrors the PDF layout (src/lib/resume/pdf.tsx). Labels are English on the resume itself. */
@@ -7,11 +7,13 @@ export function ResumeView({ s, showPct }: { s: ResumeSnapshot; showPct: boolean
   const sub = [s.department, s.year ? `Year ${s.year}` : null, s.college].filter(Boolean).join(' · ');
   const work = s.experience.filter((x) => x.type !== 'project');
   const projects = s.experience.filter((x) => x.type === 'project');
+  const { headline, nameTamil } = headerLines(s);
   return (
     <article className="mx-auto max-w-[800px] bg-white p-6 text-[13px] leading-snug text-slate-900 shadow-sm sm:p-10">
       <header className="border-b-2 border-brand-700 pb-3">
         <h2 className="text-2xl font-bold">{s.name}</h2>
-        {s.nameTamil && <p className="text-base text-slate-700" lang="ta">{s.nameTamil}</p>}
+        {nameTamil && <p className="text-base text-slate-700" lang="ta">{nameTamil}</p>}
+        {headline && <p className="mt-0.5 text-base font-semibold text-brand-700">{headline}</p>}
         {sub && <p className="mt-1 text-slate-700">{sub}</p>}
         {contact && <p className="text-slate-600">{contact}</p>}
       </header>
