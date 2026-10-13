@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useT } from '@/i18n/client';
 import { useAutosave, type SaveState } from '@/lib/useAutosave';
+import { canonicalSkillName, findCatalogSkill, normSkill, suggestSkills } from '@/lib/skill-alias';
 import { RunnerStatus } from '../RunnerStatus';
 import type { RunnerKind } from '@/lib/runner/client';
 
@@ -90,6 +91,30 @@ export function Wizard({ userId, initial, startStep, catalog, done }: {
   const updEdu = (rows: EducationRow[]) => { setEducation(rows); eduSave.queue(rows); };
   const updExp = (rows: ExperienceRow[]) => { setExperience(rows); expSave.queue(rows); };
   const updSkills = (rows: SkillRow[], sum = summary) => { setSkills(rows); skillSave.queue({ skills: rows, summary: sum }); };
+
+  // Typed skills resolve through aliases ("JS" -> JavaScript) so they match a test.
+  const addSkill = (typed: string) => {
+    const match = findCatalogSkill(typed, catalog);
+    const name = match?.name ?? canonicalSkillName(typed);
+    if (name && !skills.some((s) => normSkill(s.name) === normSkill(name))) {
+      updSkills([...skills, { skill_id: match?.id ?? null, name }]);
+    }
+    setCustom('');
+  };
+  const suggestions = useMemo(
+    () => suggestSkills(custom, catalog).filter((c) => !skills.some((s) => normSkill(s.name) === normSkill(c.name))),
+    [custom, catalog, skills],
+  );
+  // Catalogue skills first; extra suggestions only when they aren't already a catalogue skill.
+  const chipOptions = useMemo(() => {
+    const opts: SkillRow[] = catalog.map((c) => ({ skill_id: c.id, name: c.name }));
+    const seen = new Set(opts.map((o) => normSkill(o.name)));
+    for (const s of [...SUGGESTED.map((n) => ({ skill_id: null, name: n })), ...skills.filter((s) => !s.skill_id)]) {
+      const k = normSkill(canonicalSkillName(s.name));
+      if (!seen.has(k)) { seen.add(k); opts.push(s); }
+    }
+    return opts;
+  }, [catalog, skills]);
 
   async function advance() {
     setError(null);
@@ -255,9 +280,7 @@ export function Wizard({ userId, initial, startStep, catalog, done }: {
         <div className="space-y-4">
           <p className="text-sm text-slate-600">{t('wizard.skillsHint')}</p>
           <div className="flex flex-wrap gap-2">
-            {[...catalog.map((c) => ({ skill_id: c.id as string | null, name: c.name })), ...SUGGESTED.map((n) => ({ skill_id: null, name: n }))]
-              .concat(skills.filter((s) => !s.skill_id && !SUGGESTED.includes(s.name)))
-              .map((opt) => {
+            {chipOptions.map((opt) => {
                 const on = skills.some((s) => s.name.toLowerCase() === opt.name.toLowerCase());
                 return (
                   <button key={opt.name} type="button" aria-pressed={on}
@@ -270,16 +293,26 @@ export function Wizard({ userId, initial, startStep, catalog, done }: {
           </div>
           <form className="flex gap-2" onSubmit={(e) => {
             e.preventDefault();
-            const name = custom.trim();
-            if (name && !skills.some((s) => s.name.toLowerCase() === name.toLowerCase())) {
-              const match = catalog.find((c) => c.name.toLowerCase() === name.toLowerCase());
-              updSkills([...skills, { skill_id: match?.id ?? null, name: match?.name ?? name }]);
-            }
-            setCustom('');
+            addSkill(custom);
           }}>
-            <input className="input" placeholder={t('wizard.customSkill')} value={custom} maxLength={60} onChange={(e) => setCustom(e.target.value)} />
+            <input className="input" placeholder={t('wizard.customSkill')} value={custom} maxLength={60}
+              autoComplete="off" aria-describedby={suggestions.length ? 'skill-suggestions' : undefined}
+              onChange={(e) => setCustom(e.target.value)} />
             <button className="btn-secondary shrink-0" type="submit">{t('common.add')}</button>
           </form>
+          {suggestions.length > 0 && (
+            <div id="skill-suggestions" className="-mt-2 space-y-1">
+              <p className="text-xs text-slate-500">{t('wizard.skillSuggest')}</p>
+              <div className="flex flex-wrap gap-2">
+                {suggestions.map((c) => (
+                  <button key={c.id} type="button" onClick={() => addSkill(c.name)}
+                    className="rounded-full border border-brand-100 bg-brand-50 px-3 py-2 text-sm text-brand-700">
+                    + {c.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div>
             <label className="label" htmlFor="summary">{t('wizard.summary')}</label>
             <textarea id="summary" className="input min-h-[96px]" value={summary} maxLength={800}

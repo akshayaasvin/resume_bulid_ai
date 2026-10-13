@@ -2,6 +2,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getConfig } from './server-config';
 import { isPublicScore, type Badge, type SkillLevel } from './scoring';
+import { findCatalogSkill } from './skill-alias';
 
 /** What kind of questions a skill's test has (drives the label on the test hub). */
 export type TestKind = 'code' | 'situational' | 'mcq';
@@ -32,14 +33,13 @@ export async function skillOverview(supabase: SupabaseClient, profileId: string)
     supabase.from('skills').select('id, slug, name, category, assessment_type').eq('is_active', true).order('name'),
   ]);
   const cat = (catalog ?? []) as CatalogSkill[];
-  const byName = new Map(cat.map((c) => [c.name.toLowerCase(), c]));
   const byId = new Map(cat.map((c) => [c.id, c]));
   const scoreBy = new Map(((scores ?? []) as { skill_id: string; score_pct: number; level: SkillLevel; badge: Badge }[]).map((s) => [s.skill_id, s]));
 
   const rows: SkillOverviewRow[] = [];
   const seen = new Set<string>();
   for (const c of (claimed ?? []) as { skill_id: string | null; name: string }[]) {
-    const skill = (c.skill_id && byId.get(c.skill_id)) || byName.get(c.name.toLowerCase()) || null;
+    const skill = (c.skill_id && byId.get(c.skill_id)) || findCatalogSkill(c.name, cat);
     const s = skill ? scoreBy.get(skill.id) : undefined;
     if (skill) seen.add(skill.id);
     rows.push({

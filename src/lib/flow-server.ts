@@ -1,6 +1,7 @@
 import 'server-only';
 import { adminClient } from './supabase/admin';
 import { computeStep, isFlowStep, laterStep, type FlowStep } from './flow';
+import { findCatalogSkill } from './skill-alias';
 
 /** Counts the candidate's tested skills and testable declared skills. */
 export async function testProgress(profileId: string) {
@@ -10,10 +11,10 @@ export async function testProgress(profileId: string) {
     db.from('skills').select('id, name').eq('is_active', true),
     db.from('skill_scores').select('skill_id', { count: 'exact', head: true }).eq('profile_id', profileId),
   ]);
-  const ids = new Set((catalog ?? []).map((c) => c.id as string));
-  const names = new Set((catalog ?? []).map((c) => (c.name as string).toLowerCase()));
+  const cat = (catalog ?? []) as { id: string; name: string }[];
+  const ids = new Set(cat.map((c) => c.id));
   const testableDeclared = (claimed ?? []).filter(
-    (c) => (c.skill_id && ids.has(c.skill_id)) || names.has((c.name as string).toLowerCase()),
+    (c) => (c.skill_id && ids.has(c.skill_id)) || findCatalogSkill(c.name as string, cat),
   ).length;
   return { completedTests: count ?? 0, testableDeclared };
 }

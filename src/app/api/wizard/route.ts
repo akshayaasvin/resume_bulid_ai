@@ -3,6 +3,7 @@ import { apiSession } from '@/lib/auth';
 import { createResumeVersion } from '@/lib/resume/versions';
 import { track } from '@/lib/funnel';
 import { syncFlowStep } from '@/lib/flow-server';
+import { canonicalSkillName, findCatalogSkill, normSkill } from '@/lib/skill-alias';
 
 const year = z.coerce.number().int().min(1950).max(2100).nullable().optional();
 const text = (max: number) => z.string().trim().max(max);
@@ -80,14 +81,20 @@ export async function PUT(req: Request) {
         })),
       );
     } else {
-      // claimed skills: dedupe case-insensitively, then replace
+      // claimed skills: map aliases onto catalogue skills ("JS" -> JavaScript), dedupe, then replace
+      const { data: catalog } = await supabase.from('skills').select('id, name').eq('is_active', true);
       const seen = new Set<string>();
-      const skills = body.skills.filter((s) => {
-        const k = s.name.toLowerCase();
-        if (seen.has(k)) return false;
-        seen.add(k);
-        return true;
-      });
+      const skills = body.skills
+        .map((s) => {
+          const match = findCatalogSkill(s.name, (catalog ?? []) as { id: string; name: string }[]);
+          return match ? { skill_id: match.id, name: match.name } : { skill_id: s.skill_id, name: canonicalSkillName(s.name) };
+        })
+        .filter((s) => {
+          const k = normSkill(s.name);
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        });
       const { error: delErr } = await supabase.from('claimed_skills').delete().eq('profile_id', uid);
       if (delErr) throw delErr;
       if (skills.length) {

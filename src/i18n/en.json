@@ -154,5 +154,6 @@
   "hub.kind.code": "Coding + MCQ",
   "hub.kind.situational": "Situation-based questions",
   "hub.kind.mcq": "MCQ + scenarios",
-  "hub.backToTests": "Back to my tests"
+  "hub.backToTests": "Back to my tests",
+  "wizard.skillSuggest": "Did you mean:"
 }
