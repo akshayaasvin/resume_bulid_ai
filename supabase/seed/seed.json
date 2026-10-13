@@ -4,7 +4,14 @@
     { "slug": "sql", "name": "SQL", "category": "Data", "assessment_type": "mixed", "file": "sql.json" },
     { "slug": "excel", "name": "Excel", "category": "Office & Data", "assessment_type": "mcq", "file": "excel.json" },
     { "slug": "communication", "name": "Communication", "category": "Soft skills", "assessment_type": "mcq", "file": "communication.json" },
-    { "slug": "digital-marketing", "name": "Digital Marketing", "category": "Marketing", "assessment_type": "mcq", "file": "digital-marketing.json" }
+    { "slug": "digital-marketing", "name": "Digital Marketing", "category": "Marketing", "assessment_type": "mcq", "file": "digital-marketing.json" },
+    { "slug": "javascript", "name": "JavaScript", "category": "Programming", "assessment_type": "mcq", "file": "javascript.json", "test_mix": {"easy": 4, "medium": 5, "hard": 3} },
+    { "slug": "html-css", "name": "HTML/CSS", "category": "Web", "assessment_type": "mcq", "file": "html-css.json", "test_mix": {"easy": 4, "medium": 5, "hard": 3} },
+    { "slug": "java", "name": "Java", "category": "Programming", "assessment_type": "mcq", "file": "java.json", "test_mix": {"easy": 4, "medium": 5, "hard": 3} },
+    { "slug": "powerpoint", "name": "PowerPoint", "category": "Office & Design", "assessment_type": "mcq", "file": "powerpoint.json", "test_mix": {"easy": 4, "medium": 5, "hard": 3} },
+    { "slug": "canva", "name": "Canva", "category": "Office & Design", "assessment_type": "mcq", "file": "canva.json", "test_mix": {"easy": 4, "medium": 5, "hard": 3} },
+    { "slug": "teamwork", "name": "Teamwork", "category": "Soft skills", "assessment_type": "mcq", "file": "teamwork.json", "test_mix": {"easy": 4, "medium": 5, "hard": 3} },
+    { "slug": "public-speaking", "name": "Public Speaking", "category": "Soft skills", "assessment_type": "mcq", "file": "public-speaking.json", "test_mix": {"easy": 4, "medium": 5, "hard": 3} }
   ],
   "sqlSeeds": {
     "students": "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT, dept TEXT, city TEXT, marks INTEGER);\nINSERT INTO students VALUES\n(1, 'Arun', 'CSE', 'Chennai', 82),\n(2, 'Divya', 'ECE', 'Madurai', 91),\n(3, 'Karthik', 'CSE', 'Coimbatore', 67),\n(4, 'Meena', 'MECH', 'Chennai', 74),\n(5, 'Priya', 'CSE', 'Madurai', 88),\n(6, 'Ravi', 'ECE', 'Chennai', 59),\n(7, 'Sneha', 'MECH', 'Trichy', 95),\n(8, 'Vijay', 'CSE', 'Chennai', 45);",

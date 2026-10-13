@@ -91,7 +91,7 @@
   "badge.verified": "Verified",
   "badge.self": "Self-test",
   "test.start": "Start test",
-  "test.rules": "15 questions · 20 minutes. Stay on this screen; switching apps or tabs is counted.",
+  "test.rules": "{n} questions · {m} minutes. Stay on this screen; switching apps or tabs is counted.",
   "test.mode": "How are you taking this test?",
   "test.modeCampus": "At a workshop (I have the PIN)",
   "test.modeSelf": "On my own",

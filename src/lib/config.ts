@@ -28,6 +28,12 @@ export const limitsConfigSchema = z.object({
   aiDailyCallsPerUser: z.number().int().min(0),
 });
 
+/** A skill's own easy/medium/hard split (skills.test_mix) wins over the global test mix. */
+export function resolveMix(stored: unknown, fallback: TestConfig['mix']): TestConfig['mix'] {
+  const parsed = testConfigSchema.shape.mix.safeParse(stored);
+  return parsed.success && parsed.data.easy + parsed.data.medium + parsed.data.hard > 0 ? parsed.data : fallback;
+}
+
 export type ScoringConfig = z.infer<typeof scoringConfigSchema>;
 export type TestConfig = z.infer<typeof testConfigSchema>;
 export type LimitsConfig = z.infer<typeof limitsConfigSchema>;

@@ -26,8 +26,11 @@ const asRow = (q: SeedQ): QuestionRow => ({
 });
 
 describe('seed question bank', () => {
-  it('has 5 skills x 30 questions (10/12/8) and is valid', () => {
-    expect(seed.skills.map((s: { slug: string }) => s.slug)).toEqual(['python', 'sql', 'excel', 'communication', 'digital-marketing']);
+  it('has 12 skills x 30 questions (10/12/8) and is valid', () => {
+    expect(seed.skills.map((s: { slug: string }) => s.slug)).toEqual([
+      'python', 'sql', 'excel', 'communication', 'digital-marketing',
+      'javascript', 'html-css', 'java', 'powerpoint', 'canva', 'teamwork', 'public-speaking',
+    ]);
     expect(validateSeed(seed)).toEqual([]);
   });
 

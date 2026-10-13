@@ -13,6 +13,7 @@
     "db:migrate": "node scripts/db.mjs migrate",
     "db:seed": "node scripts/db.mjs seed",
     "secret-scan": "bash scripts/secret-scan.sh",
+    "questions:review": "node scripts/question-review.mjs",
     "test:rls": "vitest run -c vitest.rls.config.ts",
     "test:e2e": "playwright test",
     "load-test": "node scripts/load-test.mjs",

@@ -1,6 +1,7 @@
 import 'server-only';
 import { adminClient } from '../supabase/admin';
 import { getConfig } from '../server-config';
+import { resolveMix } from '../config';
 import { badgeFor, isBetterScore, isPublicScore, levelFor, type Badge } from '../scoring';
 import { answerSchema, gradeAnswer, scorePct, type Answer } from './grading';
 import { pickQuestions, sanitizeQuestion, type QuestionRow } from './questions';
@@ -99,7 +100,8 @@ export async function startAttempt(opts: {
   const db = adminClient();
   const cfg = await getConfig('test');
 
-  const { data: skill } = await db.from('skills').select('id, name, is_active').eq('slug', opts.skillSlug).maybeSingle();
+  // select('*') so a database without the optional test_mix column (migration 0006) still works
+  const { data: skill } = await db.from('skills').select('*').eq('slug', opts.skillSlug).maybeSingle();
   if (!skill || !skill.is_active) throw new TestError('skill_not_found', 404);
 
   // Resume an open attempt for this skill, or finalize it if it is long past its deadline.
@@ -126,7 +128,8 @@ export async function startAttempt(opts: {
 
   const { data: pool } = await db
     .from('questions').select('id, type, difficulty').eq('skill_id', skill.id).eq('status', 'published');
-  const picked = pickQuestions((pool ?? []) as Pick<QuestionRow, 'id' | 'type' | 'difficulty'>[], cfg, Math.random);
+  const mix = resolveMix(skill.test_mix, cfg.mix);
+  const picked = pickQuestions((pool ?? []) as Pick<QuestionRow, 'id' | 'type' | 'difficulty'>[], { ...cfg, mix }, Math.random);
   if (picked.length === 0) throw new TestError('no_questions', 409);
 
   const now = new Date();

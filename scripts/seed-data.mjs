@@ -28,12 +28,14 @@ export function validateSeed(seed) {
     for (const q of s.questions) {
       if (keys.has(q.key)) problems.push(`${q.key}: duplicate key`);
       keys.add(q.key);
+      if (![1, 2, 3].includes(q.difficulty)) problems.push(`${q.key}: difficulty must be 1, 2 or 3`);
       byDiff[q.difficulty] = (byDiff[q.difficulty] ?? 0) + 1;
       if (!q.body?.trim()) problems.push(`${q.key}: empty body`);
       if (q.type === 'mcq' || q.type === 'scenario') {
         if (!Array.isArray(q.options) || q.options.length !== 4) problems.push(`${q.key}: needs 4 options`);
         if (!Number.isInteger(q.correct) || q.correct < 0 || q.correct >= (q.options?.length ?? 0)) problems.push(`${q.key}: bad correct index`);
         if (new Set(q.options).size !== q.options?.length) problems.push(`${q.key}: duplicate options`);
+        if (q.options?.some((o) => typeof o !== 'string' || !o.trim())) problems.push(`${q.key}: empty option`);
       } else if (q.type === 'code_python') {
         if (!q.test_cases?.length || q.test_cases.some((c) => !c.call || typeof c.expected !== 'string')) problems.push(`${q.key}: bad python test_cases`);
       } else if (q.type === 'sql_query') {
@@ -46,6 +48,13 @@ export function validateSeed(seed) {
     if (s.questions.length !== 30) problems.push(`${s.slug}: expected 30 questions, found ${s.questions.length}`);
     if (byDiff[1] !== 10 || byDiff[2] !== 12 || byDiff[3] !== 8) {
       problems.push(`${s.slug}: expected 10/12/8 by difficulty, found ${byDiff[1]}/${byDiff[2]}/${byDiff[3]}`);
+    }
+    if (s.test_mix) {
+      const m = s.test_mix;
+      const want = { 1: m.easy, 2: m.medium, 3: m.hard };
+      for (const d of [1, 2, 3]) {
+        if (!Number.isInteger(want[d]) || want[d] < 0 || want[d] > byDiff[d]) problems.push(`${s.slug}: bad test_mix for difficulty ${d}`);
+      }
     }
   }
   return problems;

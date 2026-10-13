@@ -71,10 +71,11 @@ export async function seed(client) {
     let qCount = 0;
     for (const s of data.skills) {
       const { rows: [skill] } = await client.query(
-        `insert into skills(slug, name, category, assessment_type, is_active) values ($1,$2,$3,$4,true)
-         on conflict (slug) do update set name = excluded.name, category = excluded.category, assessment_type = excluded.assessment_type
+        `insert into skills(slug, name, category, assessment_type, test_mix, is_active) values ($1,$2,$3,$4,$5,true)
+         on conflict (slug) do update set name = excluded.name, category = excluded.category,
+           assessment_type = excluded.assessment_type, test_mix = excluded.test_mix
          returning id`,
-        [s.slug, s.name, s.category, s.assessment_type],
+        [s.slug, s.name, s.category, s.assessment_type, s.test_mix ? JSON.stringify(s.test_mix) : null],
       );
       for (const q of s.questions) {
         await client.query(

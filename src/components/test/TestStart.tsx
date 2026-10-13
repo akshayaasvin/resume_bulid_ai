@@ -5,8 +5,8 @@ import { useState } from 'react';
 import { useT } from '@/i18n/client';
 import { RunnerStatus } from '../RunnerStatus';
 
-export function TestStart({ skillSlug, skillName, hasWorkshop, openAttemptId }: {
-  skillSlug: string; skillName: string; hasWorkshop: boolean; openAttemptId: string | null;
+export function TestStart({ skillSlug, skillName, hasWorkshop, openAttemptId, questionCount, minutes }: {
+  skillSlug: string; skillName: string; hasWorkshop: boolean; openAttemptId: string | null; questionCount: number; minutes: number;
 }) {
   const { t, lang } = useT();
   const router = useRouter();
@@ -53,7 +53,7 @@ export function TestStart({ skillSlug, skillName, hasWorkshop, openAttemptId }: 
     <main className="mx-auto max-w-md px-4 py-6">
       <Link href="/test" className="text-sm text-brand-700">← {t('common.back')}</Link>
       <h1 className="mt-3 text-2xl font-bold">{skillName}</h1>
-      <p className="mt-2 text-slate-600">{t('test.rules')}</p>
+      <p className="mt-2 text-slate-600">{t('test.rules', { n: questionCount, m: minutes })}</p>
       <div className="mt-3"><RunnerStatus kinds={[...kinds]} /></div>
 
       {openAttemptId ? (
