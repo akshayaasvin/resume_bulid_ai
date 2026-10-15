@@ -14,6 +14,9 @@ const QUESTION_COLUMNS = 'id, skill_id, type, difficulty, body, options, correct
 export interface ClusterAttemptRow {
   id: string; profile_id: string; cluster_id: string; plan: PlanItem[];
   status: 'in_progress' | 'submitted'; expires_at: string; results: Record<string, number> | null;
+  started_at: string; submitted_at: string | null;
+  mode: 'self' | 'campus'; proctor_verified: boolean; grace_minutes: number;
+  tab_switches: number; fullscreen_exits: number; flagged: boolean;
 }
 
 export interface ClusterState {
@@ -31,6 +34,9 @@ export interface ClusterState {
   results: Record<string, number> | null;
   /** Scores at/above this are verified (same cut-off as the resume). */
   threshold: number;
+  mode: 'self' | 'campus';
+  tabSwitches: number;
+  flagged: boolean;
 }
 
 async function loadOwned(attemptId: string, profileId: string) {
@@ -85,7 +91,20 @@ export async function loadClusterState(attemptId: string, profileId: string): Pr
     question,
     results: attempt.results,
     threshold: (await getConfig('scoring')).beginnerMin,
+    mode: attempt.mode ?? 'self',
+    tabSwitches: attempt.tab_switches ?? 0,
+    flagged: !!attempt.flagged,
   };
+}
+
+/** Tab switch / fullscreen exit during a group test (shown on the proctor board, can flag the attempt). */
+export async function recordClusterEvent(attemptId: string, profileId: string, kind: 'tab' | 'fullscreen') {
+  await loadOwned(attemptId, profileId);
+  const scoring = await getConfig('scoring');
+  const { data } = await adminClient().rpc('bump_cluster_attempt_counter', {
+    p_attempt: attemptId, p_kind: kind, p_flag_after: scoring.autoFlagAfter,
+  });
+  return (data as { tab_switches: number; fullscreen_exits: number; flagged: boolean }[] | null)?.[0] ?? null;
 }
 
 /** Grades one answer on the server (it must be for the expected question) and returns the next state. */

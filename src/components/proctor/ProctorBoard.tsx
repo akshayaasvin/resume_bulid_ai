@@ -111,7 +111,7 @@ export function ProctorBoard({ batchCode, joinUrl, qr, initial }: { batchCode: s
         <section className="card overflow-x-auto p-0 lg:col-span-2">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left">
-              <tr><th className="px-3 py-2">Student</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">Test</th><th className="px-3 py-2">Tab switches</th></tr>
+              <tr><th className="px-3 py-2">Student</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">Test</th><th className="px-3 py-2">Progress</th><th className="px-3 py-2">Tab switches</th></tr>
             </thead>
             <tbody>
               {data.students.map((s) => {
@@ -127,13 +127,17 @@ export function ProctorBoard({ batchCode, joinUrl, qr, initial }: { batchCode: s
                       {s.flagged && <span className="chip ml-1 bg-red-100 text-red-800">Flagged</span>}
                       {s.locked && <span className="chip ml-1 bg-red-100 text-red-800">PIN locked</span>}
                     </td>
-                    <td className="px-3 py-2">{s.skill ?? '–'}</td>
+                    <td className="px-3 py-2">
+                      {s.skill ?? '–'}
+                      {s.kind === 'group' && <span className="chip ml-1 bg-brand-100 text-brand-700">Group</span>}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums">{s.progress ? `${s.progress.answered}/${s.progress.total}` : '–'}</td>
                     <td className={`px-3 py-2 ${s.tabSwitches > 2 ? 'font-bold text-red-700' : ''}`}>{s.tabSwitches}</td>
                   </tr>
                 );
               })}
               {data.students.length === 0 && (
-                <tr><td colSpan={4} className="px-3 py-6 text-center text-slate-500">No students yet. Show the join QR.</td></tr>
+                <tr><td colSpan={5} className="px-3 py-6 text-center text-slate-500">No students yet. Show the join QR.</td></tr>
               )}
             </tbody>
           </table>

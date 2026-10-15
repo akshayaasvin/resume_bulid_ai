@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useT } from '@/i18n/client';
+import { ClusterModePicker } from './ClusterModePicker';
 
 interface Option { key: number; text: string }
 interface State {
@@ -11,6 +12,8 @@ interface State {
   question: { id: string; body: string; skill: string; options?: Option[] } | null;
   results: Record<string, number> | null;
   threshold: number;
+  mode: 'self' | 'campus';
+  tabSwitches: number;
 }
 
 const fmt = (ms: number) => {
@@ -22,8 +25,9 @@ const fmt = (ms: number) => {
  * Combined skill-group test: one question at a time, graded on the server as you go (a skill stops
  * after 2 wrong answers in a row). Ends with a score per skill.
  */
-export function ClusterTestRunner({ cluster, title }: { cluster: string; title: string }) {
-  const { t } = useT();
+export function ClusterTestRunner({ cluster, title, hasWorkshop }: { cluster: string; title: string; hasWorkshop: boolean }) {
+  const { t, lang } = useT();
+  const [tabWarning, setTabWarning] = useState<number | null>(null);
   const [state, setState] = useState<State | null>(null);
   const [choice, setChoice] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -54,20 +58,44 @@ export function ClusterTestRunner({ cluster, title }: { cluster: string; title: 
     setState(s);
   };
 
+  async function begin(mode: 'self' | 'campus', pin?: string) {
+    setBusy(true);
+    setError(null);
+    const res = await fetch('/api/cluster-test/start', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ cluster, mode, pin }),
+    }).catch(() => null);
+    const body = await res?.json().catch(() => ({}));
+    setBusy(false);
+    if (!res?.ok || !body?.attemptId) {
+      if (body?.error === 'pin_wrong') setError(t('test.pinWrong', { left: body.left ?? 0 }));
+      else if (body?.error === 'pin_locked') {
+        const time = new Date(body.until).toLocaleTimeString(lang === 'ta' ? 'ta-IN' : 'en-IN', { hour: '2-digit', minute: '2-digit' });
+        setError(t('test.pinLocked', { time }));
+      } else setError(t(body?.error === 'no_questions' ? 'cluster.noQuestions' : body?.error === 'no_workshop' ? 'test.noWorkshop' : 'common.error'));
+      return;
+    }
+    apply(await call(`/api/cluster-test/${body.attemptId}`));
+  }
+
+  // Without a workshop there is nothing to choose: start (or resume) in self mode right away.
   useEffect(() => {
-    (async () => {
-      const res = await fetch('/api/cluster-test/start', {
-        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ cluster }),
-      }).catch(() => null);
-      const body = await res?.json().catch(() => ({}));
-      if (!res?.ok || !body?.attemptId) {
-        setError(t(body?.error === 'no_questions' ? 'cluster.noQuestions' : 'common.error'));
-        return;
-      }
-      apply(await call(`/api/cluster-test/${body.attemptId}`));
-    })();
+    if (!hasWorkshop) void begin('self');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cluster]);
+  }, [cluster, hasWorkshop]);
+
+  // Leaving the test screen is recorded (proctor board; too many switches flag the attempt).
+  const attemptId = state?.status === 'in_progress' ? state.attemptId : null;
+  useEffect(() => {
+    if (!attemptId) return;
+    const onVis = () => {
+      if (document.visibilityState !== 'hidden') return;
+      fetch(`/api/cluster-test/${attemptId}/event`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'tab' }), keepalive: true,
+      }).then((r) => r.json()).then((d: { tab_switches?: number }) => { if (d.tab_switches) setTabWarning(d.tab_switches); }).catch(() => undefined);
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [attemptId]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -92,7 +120,13 @@ export function ClusterTestRunner({ cluster, title }: { cluster: string; title: 
     return (
       <main className="mx-auto max-w-2xl space-y-4 px-4 py-6">
         <h1 className="text-xl font-bold">{title}</h1>
-        {error ? <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p> : <p className="text-slate-600">{t('common.loading')}</p>}
+        {hasWorkshop ? (
+          <ClusterModePicker busy={busy} error={error} onStart={begin} />
+        ) : error ? (
+          <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>
+        ) : (
+          <p className="text-slate-600">{t('common.loading')}</p>
+        )}
         <Link href="/test" className="btn-secondary w-full">{t('hub.backToTests')}</Link>
       </main>
     );
@@ -144,6 +178,7 @@ export function ClusterTestRunner({ cluster, title }: { cluster: string; title: 
             </button>
           ))}
         </div>
+        {tabWarning !== null && <p role="alert" className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{t('test.warnTab', { n: tabWarning })}</p>}
         {error && <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       </main>
       <footer className="sticky bottom-0 border-t border-slate-200 bg-white p-3">

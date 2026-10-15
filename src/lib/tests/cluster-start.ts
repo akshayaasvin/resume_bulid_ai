@@ -3,7 +3,7 @@ import { adminClient } from '../supabase/admin';
 import { getConfig } from '../server-config';
 import { findCatalogSkill } from '../skill-alias';
 import { pickQuestions, type QuestionRow } from '../test-engine/questions';
-import { TestError } from '../test-engine/service';
+import { TestError, checkPin } from '../test-engine/service';
 import { prepareInBackground } from '../ai/skill-tests';
 import { track } from '../funnel';
 import { MIN_PER_SKILL, clusterById, offeredClusters, planCluster, type ClusterId } from './clusters';
@@ -19,11 +19,22 @@ function mixFor(n: number) {
   return { easy, medium: n - easy - hard, hard };
 }
 
+export interface StartOptions {
+  mode: 'self' | 'campus';
+  /** Workshop PIN (campus mode). */
+  pin?: string;
+  deviceId: string;
+  /** The candidate's workshop (campus mode needs one). */
+  workshopId: string | null;
+}
+
 /**
  * Starts (or resumes) the candidate's combined test for one skill group. Only MCQ / scenario
  * questions, 15 in total, split over the group's selected skills that have a question bank.
  */
-export async function startClusterTest(profileId: string, clusterId: ClusterId): Promise<{ attemptId: string; resumed: boolean }> {
+export async function startClusterTest(
+  profileId: string, clusterId: ClusterId, opts: StartOptions = { mode: 'self', deviceId: '', workshopId: null },
+): Promise<{ attemptId: string; resumed: boolean }> {
   const db = adminClient();
   const now = new Date();
 
@@ -60,11 +71,20 @@ export async function startClusterTest(profileId: string, clusterId: ClusterId):
   });
 
   const cfg = await getConfig('test');
+  // Workshop (campus) mode: same PIN check and lockout as per-skill tests.
+  let workshop: { id: string; late_grace_minutes: number } | null = null;
+  if (opts.mode === 'campus') {
+    if (!opts.workshopId) throw new TestError('no_workshop', 400);
+    if (!opts.pin) throw new TestError('pin_required', 400);
+    workshop = await checkPin(profileId, opts.deviceId, opts.workshopId, opts.pin);
+  }
   const { data: attempt, error } = await db.from('cluster_attempts').insert({
     profile_id: profileId, cluster_id: clusterId, plan,
+    mode: opts.mode, workshop_id: workshop?.id ?? null, proctor_verified: !!workshop,
+    grace_minutes: workshop ? workshop.late_grace_minutes : cfg.selfModeGraceMinutes,
     started_at: now.toISOString(), expires_at: new Date(now.getTime() + cfg.durationMinutes * 60_000).toISOString(),
   }).select('id').single();
   if (error || !attempt) throw new TestError('start_failed', 500);
-  await track(profileId, 'test_started', { cluster: clusterById(clusterId).id, skills: plan.length });
+  await track(profileId, 'test_started', { cluster: clusterById(clusterId).id, skills: plan.length, mode: opts.mode });
   return { attemptId: attempt.id as string, resumed: false };
 }

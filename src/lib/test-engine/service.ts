@@ -42,7 +42,7 @@ const QUESTION_COLUMNS = 'id, skill_id, type, difficulty, body, options, correct
 // ---------------------------------------------------------------------------
 // PIN check with lockout
 // ---------------------------------------------------------------------------
-async function checkPin(profileId: string, deviceId: string, workshopId: string, pin: string) {
+export async function checkPin(profileId: string, deviceId: string, workshopId: string, pin: string) {
   const db = adminClient();
   const cfg = await getConfig('test');
   const now = new Date();

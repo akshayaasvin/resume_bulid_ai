@@ -1,7 +1,7 @@
 import 'server-only';
 import { adminClient } from '../supabase/admin';
 import { getConfig } from '../server-config';
-import { isBetterScore, isPublicScore, levelFor, type Badge } from '../scoring';
+import { badgeFor, isBetterScore, isPublicScore, levelFor, type Badge } from '../scoring';
 import { createResumeVersion } from '../resume/versions';
 import { syncFlowStep } from '../flow-server';
 import { track } from '../funnel';
@@ -22,8 +22,16 @@ export async function finalizeCluster(attempt: ClusterAttemptRow, marks: AnswerM
     .eq('id', attempt.id).eq('status', 'in_progress').select('id');
   if (!claimed?.length) return; // another request finalised it
 
-  // Self-taken tests carry the 'self' badge, exactly like self-mode single-skill tests.
-  const badge: Badge = 'self';
+  // Same badge rule as per-skill tests: campus + valid PIN + few tab switches + on time = campus verified.
+  const badge: Badge = badgeFor({
+    mode: attempt.mode ?? 'self',
+    proctorVerified: !!attempt.proctor_verified,
+    tabSwitches: attempt.tab_switches ?? 0,
+    flagged: !!attempt.flagged,
+    submittedAt: new Date(),
+    expiresAt: new Date(attempt.expires_at),
+    graceMinutes: attempt.grace_minutes ?? 0,
+  }, scoring);
   let newPublicScore = false;
   for (const p of attempt.plan) {
     const pct = results[p.skill];
