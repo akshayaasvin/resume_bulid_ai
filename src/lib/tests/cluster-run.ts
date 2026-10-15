@@ -8,6 +8,7 @@ import { runSqlOnServer } from '../test-engine/sql-runner';
 import { nextSkill, skillStopped, type AnswerMark } from './clusters';
 import type { PlanItem } from './cluster-start';
 import { finalizeCluster } from './cluster-finalize';
+import { codingOffer, type CodingResult } from './coding-round';
 
 const QUESTION_COLUMNS = 'id, skill_id, type, difficulty, body, options, correct, test_cases, sql_seed, starter_code, marks';
 
@@ -37,6 +38,8 @@ export interface ClusterState {
   mode: 'self' | 'campus';
   tabSwitches: number;
   flagged: boolean;
+  /** Optional coding round (Python / SQL) offered after a finished Programming / Data group test. */
+  coding: { skill: string; skillId: string; result: CodingResult | null }[];
 }
 
 async function loadOwned(attemptId: string, profileId: string) {
@@ -94,6 +97,7 @@ export async function loadClusterState(attemptId: string, profileId: string): Pr
     mode: attempt.mode ?? 'self',
     tabSwitches: attempt.tab_switches ?? 0,
     flagged: !!attempt.flagged,
+    coding: attempt.status === 'submitted' ? await codingOffer(attempt).catch(() => []) : [],
   };
 }
 

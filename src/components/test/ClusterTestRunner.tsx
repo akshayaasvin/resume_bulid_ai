@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useT } from '@/i18n/client';
 import { ClusterModePicker } from './ClusterModePicker';
+import { CodingRoundOffer } from './CodingRoundOffer';
 
 interface Option { key: number; text: string }
 interface State {
@@ -14,6 +15,7 @@ interface State {
   threshold: number;
   mode: 'self' | 'campus';
   tabSwitches: number;
+  coding?: { skill: string; skillId: string; result: { passed: number; total: number; verified: boolean } | null }[];
 }
 
 const fmt = (ms: number) => {
@@ -149,6 +151,7 @@ export function ClusterTestRunner({ cluster, title, hasWorkshop }: { cluster: st
           ))}
         </ul>
         <p className="text-xs text-slate-500">{t('cluster.privateNote')}</p>
+        <CodingRoundOffer attemptId={state.attemptId} offers={state.coding ?? []} />
         <Link href="/test" className="btn-primary w-full">{t('hub.backToTests')}</Link>
       </main>
     );

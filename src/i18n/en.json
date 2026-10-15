@@ -342,5 +342,11 @@
   "resume.selfDeclared": "Self-declared skills",
   "resume.verifyLater": "Verify later",
   "resume.selfDeclaredHint": "Take a short test to turn these into Verified skills.",
-  "resume.selfDeclaredBadge": "Self-declared"
+  "resume.selfDeclaredBadge": "Self-declared",
+  "coding.offer": "Add coding round (optional)",
+  "coding.offerHint": "2 short coding questions per skill. The result is shown separately as Coding verified; your skill % above does not change.",
+  "coding.start": "Start",
+  "coding.skip": "Skip",
+  "coding.title": "{skill}: coding round",
+  "coding.verified": "Coding verified"
 }
