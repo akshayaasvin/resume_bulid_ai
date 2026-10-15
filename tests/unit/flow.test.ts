@@ -1,8 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { computeStep, gateRedirect, laterStep, requiredTests, stepForPath } from '@/lib/flow';
+import { computeStep, gateRedirect, laterStep, reached, requiredTests, stepForPath } from '@/lib/flow';
 import { headerLines } from '@/lib/resume/snapshot';
 
-const avail = (testable: number, waiting = 0, unavailable = 0) => ({ testable, waiting, unavailable });
+const avail = (testable: number, waiting = 0, unavailable = 0) => ({ testable, waiting, unavailable, hasTargetRole: true });
+
+describe('roles step', () => {
+  it('asks for a target role after tests, before done', () => {
+    expect(computeStep({ wizardStep: 4, completedTests: 3, ...avail(3), hasTargetRole: false })).toBe('roles');
+    expect(computeStep({ wizardStep: 4, completedTests: 3, ...avail(3), hasTargetRole: true })).toBe('done');
+    expect(computeStep({ wizardStep: 4, completedTests: 1, ...avail(3), hasTargetRole: false })).toBe('tests');
+  });
+  it('gates /roles until tests are done, and /resume until a role is picked', () => {
+    expect(gateRedirect('tests', '/roles')).toBe('/test');
+    expect(gateRedirect('roles', '/roles')).toBeNull();
+    expect(gateRedirect('roles', '/resume')).toBe('/roles');
+    expect(gateRedirect('roles', '/test/python')).toBeNull();
+    expect(gateRedirect('done', '/roles')).toBeNull();
+    expect(reached('roles', 'roles')).toBe(true);
+    expect(reached('tests', 'roles')).toBe(false);
+    expect(reached(null, 'tests')).toBe(false);
+  });
+});
 
 describe('requiredTests', () => {
   it('is 3, or every testable declared skill when fewer', () => {

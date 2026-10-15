@@ -8,32 +8,38 @@ export function uniquePhone() {
   return `9${String(Date.now()).slice(-6)}${Math.floor(Math.random() * 900 + 100)}`;
 }
 
-export async function register(page: Page, name = 'Test Student') {
+/** Goal-based onboarding through the workshop link: answers -> roles -> details -> /test. */
+export async function onboard(page: Page, name = 'Test Student', skill = 'Excel') {
   const phone = uniquePhone();
   await page.goto('/join/DEMO-001');
-  await page.locator('#full_name').fill(name);
-  await page.locator('#phone').fill(phone);
-  await page.locator('#password').fill('secret12');
-  await page.getByRole('button', { name: 'Register' }).click();
-  await page.waitForURL('**/wizard');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole('button', { name: /^A job/ }).click();
+  for (const lang of ['English', 'Tamil']) {
+    await page.getByRole('group', { name: lang }).getByRole('button', { name: 'Intermediate' }).click();
+  }
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Teamwork' }).click();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: skill, exact: true }).click();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByRole('heading', { name: 'Roles that fit you' })).toBeVisible();
+  await page.getByRole('button', { name: 'Save my results' }).click();
+  await page.locator('#ob-full_name').fill(name);
+  await page.locator('#ob-phone').fill(phone);
+  await page.locator('#ob-password').fill('secret12');
+  await page.locator('[id$="-institution"]').first().fill('Demo College of Engineering');
+  await page.locator('[id$="-degree"]').first().fill('B.E.');
+  await page.getByRole('button', { name: 'Create my account' }).click();
+  await page.waitForURL('**/test');
   return phone;
 }
 
-export async function completeWizard(page: Page, skill = 'Excel') {
-  const card = page.locator('fieldset').first();
-  await card.locator('input').nth(0).fill('Demo College of Engineering');
-  await card.locator('input').nth(1).fill('B.E.');
-  await card.locator('input').nth(2).fill('CSE');
-  await page.getByRole('button', { name: 'Next' }).click();
-  await expect(page.getByRole('heading', { name: 'Experience & projects' })).toBeVisible();
-  await page.getByRole('button', { name: 'Add experience or project' }).click();
-  await page.locator('fieldset').first().locator('input').nth(0).fill('Library app');
-  await page.locator('fieldset').first().locator('textarea').fill('Built search\nAdded login');
-  await page.getByRole('button', { name: 'Next' }).click();
-  await expect(page.getByRole('heading', { name: 'Skills you have' })).toBeVisible();
-  await page.getByRole('button', { name: skill, exact: true }).click();
-  await page.getByRole('button', { name: 'Finish & take my skill tests' }).click();
-  await page.waitForURL('**/test');
+/** After the tests: pick the first suggested role, which opens the resume. */
+export async function pickRole(page: Page) {
+  await page.goto('/roles');
+  await page.getByRole('button', { name: 'Choose this role' }).first().click();
+  await page.waitForURL('**/resume');
 }
 
 /** Correct option text per question id, straight from the DB (test-only shortcut). */

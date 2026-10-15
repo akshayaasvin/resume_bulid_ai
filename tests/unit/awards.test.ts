@@ -7,7 +7,7 @@ import { renderResumePdf } from '@/lib/resume/pdf';
 import { buildSnapshot, type ResumeSnapshot, type SnapshotInput } from '@/lib/resume/snapshot';
 import { ResumeView } from '@/components/resume/ResumeView';
 
-const NOW = new Date('2026-10-15T00:00:00Z'); // max year 2032
+const NOW = new Date('2026-10-15T00:00:00Z'); // max year 2031
 
 describe('validateAward', () => {
   it('accepts a named award with optional issuer and year', () => {
@@ -18,11 +18,11 @@ describe('validateAward', () => {
     expect(validateAward({ name: ' ', issuer: 'NPTEL', year: null }, NOW).name).toBe('required');
     expect(validateAward({ name: 'A', issuer: null, year: null }, NOW).name).toBe('tooShort');
   });
-  it('uses the Education year rules (4 digits, 1970..now+6)', () => {
+  it('uses the Education year rules (4 digits, 1970..now+5)', () => {
     expect(validateAward({ name: 'Hackathon', issuer: null, year: 202 }, NOW).year).toBe('year');
     expect(validateAward({ name: 'Hackathon', issuer: null, year: 1969 }, NOW).year).toBe('year');
-    expect(validateAward({ name: 'Hackathon', issuer: null, year: 2033 }, NOW).year).toBe('year');
-    expect(validateAward({ name: 'Hackathon', issuer: null, year: 2032 }, NOW)).toEqual({});
+    expect(validateAward({ name: 'Hackathon', issuer: null, year: 2032 }, NOW).year).toBe('year');
+    expect(validateAward({ name: 'Hackathon', issuer: null, year: 2031 }, NOW)).toEqual({});
   });
   it('ignores blank cards', () => {
     const blank = { name: '', issuer: '', year: null };

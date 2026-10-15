@@ -2,12 +2,13 @@
  * Candidate funnel. Each step gates the next: a candidate may revisit earlier steps but is
  * redirected to their current step when they open a later one. Pure (runs in middleware).
  */
-export const FLOW_STEPS = ['wizard', 'tests', 'done'] as const;
+export const FLOW_STEPS = ['wizard', 'tests', 'roles', 'done'] as const;
 export type FlowStep = (typeof FLOW_STEPS)[number];
 
 export const STEP_HOME: Record<FlowStep, string> = {
   wizard: '/wizard',
   tests: '/test',
+  roles: '/roles',
   done: '/dashboard',
 };
 
@@ -42,11 +43,17 @@ export function laterStep(a: FlowStep | null, b: FlowStep): FlowStep {
   return a && rank(a) > rank(b) ? a : b;
 }
 
-export function computeStep(input: { wizardStep: number; completedTests: number } & SkillTestAvailability): FlowStep {
+export function computeStep(
+  input: { wizardStep: number; completedTests: number; hasTargetRole: boolean } & SkillTestAvailability,
+): FlowStep {
   if (input.wizardStep < 4) return 'wizard';
   if (input.completedTests < requiredTests(input)) return 'tests';
+  if (!input.hasTargetRole) return 'roles';
   return 'done';
 }
+
+/** True when `step` is at or past `target` in the funnel. */
+export const reached = (step: FlowStep | null, target: FlowStep) => !!step && rank(step) >= rank(target);
 
 const matches = (path: string, prefix: string) => path === prefix || path.startsWith(`${prefix}/`);
 
@@ -54,6 +61,7 @@ const matches = (path: string, prefix: string) => path === prefix || path.starts
 export function stepForPath(path: string): FlowStep | null {
   if (matches(path, '/wizard')) return 'wizard';
   if (matches(path, '/test') || matches(path, '/results')) return 'tests';
+  if (matches(path, '/roles')) return 'roles';
   if (matches(path, '/dashboard') || matches(path, '/resume')) return 'done';
   return null;
 }

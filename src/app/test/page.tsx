@@ -9,7 +9,7 @@ import { getT } from '@/i18n/server';
 import { requireSession } from '@/lib/auth';
 import { skillOverview, type SkillOverviewRow } from '@/lib/candidate-data';
 import { skillTestStatuses, type SkillTestStatus } from '@/lib/ai/skill-tests';
-import { STEP_HOME, requiredTests } from '@/lib/flow';
+import { STEP_HOME, reached, requiredTests } from '@/lib/flow';
 import { syncFlowStep, testProgress } from '@/lib/flow-server';
 import { canonicalSkillName, normSkill } from '@/lib/skill-alias';
 
@@ -27,7 +27,7 @@ export default async function TestHub() {
   const extra = rows.filter((r) => !r.claimed);
   const completed = progress.completedTests;
   const required = requiredTests(progress);
-  const unlocked = completed >= required || step === 'done';
+  const unlocked = completed >= required || reached(step, 'roles');
   // Declared skills with no test yet: their question bank is generated in the background.
   const untested = declared.filter((r) => !r.testable);
   const statuses = await skillTestStatuses(untested.map((r) => r.name));
@@ -102,7 +102,7 @@ export default async function TestHub() {
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto max-w-2xl">
           {unlocked ? (
-            <Link href={STEP_HOME.done} className="btn-primary w-full">{t('hub.seeMatches')} →</Link>
+            <Link href={STEP_HOME.roles} className="btn-primary w-full">{t('hub.seeMatches')} →</Link>
           ) : (
             <>
               <button type="button" className="btn-primary w-full opacity-50" disabled aria-describedby="hub-gate">

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { educationValid, isValidScore, sanitizeScoreInput, validateEducation, yearMax } from '@/lib/education-validation';
 import { putJson } from '@/lib/useAutosave';
 
-const NOW = new Date('2026-10-15T00:00:00Z'); // max year = 2032
+const NOW = new Date('2026-10-15T00:00:00Z'); // max year = 2031
 const row = (o: Partial<Parameters<typeof validateEducation>[0]> = {}) => ({
   institution: 'PSG College of Technology', degree: 'B.E.', field: 'CSE', start_year: 2022, end_year: 2026, score: '8.4', ...o,
 });
@@ -21,13 +21,13 @@ describe('validateEducation', () => {
     expect(validateEducation(row({ degree: 'B' }), NOW).degree).toBe('tooShort');
   });
 
-  it('only accepts 4-digit years from 1970 to current year + 6', () => {
-    expect(yearMax(NOW)).toBe(2032);
+  it('only accepts 4-digit years from 1970 to current year + 5', () => {
+    expect(yearMax(NOW)).toBe(2031);
     expect(validateEducation(row({ start_year: 2 }), NOW).start_year).toBe('year'); // half-typed
     expect(validateEducation(row({ start_year: 202 }), NOW).start_year).toBe('year');
     expect(validateEducation(row({ start_year: 1969 }), NOW).start_year).toBe('year');
-    expect(validateEducation(row({ end_year: 2033 }), NOW).end_year).toBe('year');
-    expect(validateEducation(row({ start_year: 1970, end_year: 2032 }), NOW)).toEqual({});
+    expect(validateEducation(row({ end_year: 2032 }), NOW).end_year).toBe('year');
+    expect(validateEducation(row({ start_year: 1970, end_year: 2031 }), NOW)).toEqual({});
     expect(validateEducation(row({ start_year: null, end_year: null }), NOW)).toEqual({}); // years are optional
   });
 

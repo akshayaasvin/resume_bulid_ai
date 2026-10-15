@@ -7,14 +7,32 @@ export interface EducationInput {
   start_year: number | null; end_year: number | null; score: string | null;
 }
 export type EduField = 'institution' | 'degree' | 'start_year' | 'end_year' | 'score';
-export type EduError = 'required' | 'tooShort' | 'year' | 'yearOrder' | 'score';
+export type EduError = 'required' | 'tooShort' | 'year' | 'yearOrder' | 'score' | 'letters' | 'junk';
 export type EduErrors = Partial<Record<EduField, EduError>>;
 
 /** Order used to find the first invalid field to focus. */
 export const EDU_FIELDS: EduField[] = ['institution', 'degree', 'start_year', 'end_year', 'score'];
 
 export const YEAR_MIN = 1970;
-export const yearMax = (now = new Date()) => now.getFullYear() + 6;
+export const yearMax = (now = new Date()) => now.getFullYear() + 5;
+
+const KEYBOARD_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
+
+/**
+ * Catches keyboard mash typed into a school/college name: "Asd", "qwe", "Vbb", "aaaa".
+ * Abbreviations in capitals such as "PSG", "SRM" or "IIT" are allowed.
+ */
+export function isJunkName(raw: string): boolean {
+  const letters = raw.toLowerCase().replace(/[^a-z]/g, '');
+  if (letters.length < 3) return true;
+  if (/(.)\1\1/.test(letters)) return true; // aaa, xxx
+  if (letters.length <= 5 && KEYBOARD_ROWS.some((row) => row.includes(letters) || [...row].reverse().join('').includes(letters))) return true;
+  // a vowel-less word is only allowed as a capitalised abbreviation (PSG, SRM)
+  return raw.split(/[^A-Za-z]+/).some((w) => w.length >= 3 && !/[aeiouy]/i.test(w) && w !== w.toUpperCase());
+}
+
+/** School / college names: letters plus common punctuation, no digits. */
+const NAME_CHARS = /^[A-Za-z][A-Za-z .,'&()/-]*$/;
 
 /** A card the candidate hasn't started filling is ignored (not validated, not saved). */
 export function isBlankEducation(e: EducationInput): boolean {
@@ -43,7 +61,9 @@ export function validateEducation(e: EducationInput, now = new Date()): EduError
   const inst = e.institution.trim();
   const deg = e.degree.trim();
   if (!inst) errors.institution = 'required';
-  else if (inst.length < 2) errors.institution = 'tooShort';
+  else if (inst.length < 3) errors.institution = 'tooShort';
+  else if (!NAME_CHARS.test(inst)) errors.institution = 'letters';
+  else if (isJunkName(inst)) errors.institution = 'junk';
   if (!deg) errors.degree = 'required';
   else if (deg.length < 2) errors.degree = 'tooShort';
   if (e.start_year != null && !validYear(e.start_year, now)) errors.start_year = 'year';

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { AppHeader } from '@/components/AppHeader';
-import { RegisterForm } from '@/components/RegisterForm';
+import { Onboarding } from '@/components/onboarding/Onboarding';
 import { getT } from '@/i18n/server';
 import { adminClient } from '@/lib/supabase/admin';
 
@@ -19,9 +19,8 @@ export default async function JoinPage({ params }: { params: { batch_code: strin
     <>
       <AppHeader />
       <main className="mx-auto max-w-md px-4 pb-16 pt-6">
-        <h1 className="mb-4 text-2xl font-bold">{t('landing.join')}</h1>
         {ws && ws.is_active ? (
-          <RegisterForm batch={{ code: ws.batch_code, name: ws.name, college: ws.colleges?.name ?? '' }} />
+          <Onboarding colleges={[]} batch={{ code: ws.batch_code, name: ws.name, college: ws.colleges?.name ?? '' }} />
         ) : (
           <div className="card space-y-3">
             <p className="text-red-700">{t('auth.invalidBatch')}</p>

@@ -1,10 +1,8 @@
 import { expect, test } from '@playwright/test';
-import { answerQuestion, completeWizard, correctAnswers, register, startCampusTest, submitTest } from './helpers';
+import { answerQuestion, correctAnswers, onboard, pickRole, startCampusTest, submitTest } from './helpers';
 
-test('workshop flow: join -> wizard -> campus test -> verified resume', async ({ page }) => {
-  await register(page);
-  await completeWizard(page);
-  await expect(page.getByText('Version 1')).toBeVisible();
+test('workshop flow: join -> onboarding -> campus test -> role -> verified resume', async ({ page }) => {
+  await onboard(page);
 
   const { questions } = await startCampusTest(page);
   expect(questions).toHaveLength(15);
@@ -20,7 +18,7 @@ test('workshop flow: join -> wizard -> campus test -> verified resume', async ({
   await expect(page.getByText('100%')).toBeVisible();
   await expect(page.getByText('Campus Verified').first()).toBeVisible();
 
-  await page.goto('/resume');
+  await pickRole(page);
   await expect(page.getByText('Version 2 ✓')).toBeVisible();
   await expect(page.getByText('Verified Skills')).toBeVisible();
   const pdf = await page.request.get('/api/resume/2/pdf');
@@ -30,8 +28,7 @@ test('workshop flow: join -> wizard -> campus test -> verified resume', async ({
 });
 
 test('network cut mid-test: answers survive offline, submit retries and lands', async ({ page, context }) => {
-  await register(page, 'Offline Student');
-  await completeWizard(page);
+  await onboard(page, 'Offline Student');
   const { questions } = await startCampusTest(page);
   const correct = await correctAnswers(questions.map((q) => q.id));
 
@@ -61,8 +58,7 @@ test('network cut mid-test: answers survive offline, submit retries and lands', 
 });
 
 test('slow 3G: campus test still completes', async ({ page, context }) => {
-  await register(page, 'Slow Student');
-  await completeWizard(page);
+  await onboard(page, 'Slow Student');
   const cdp = await context.newCDPSession(page);
   await cdp.send('Network.enable');
   await cdp.send('Network.emulateNetworkConditions', {
@@ -80,8 +76,7 @@ test('slow 3G: campus test still completes', async ({ page, context }) => {
 });
 
 test('wrong PIN 5 times locks the account for 10 minutes', async ({ page }) => {
-  await register(page, 'Lock Student');
-  await completeWizard(page);
+  await onboard(page, 'Lock Student');
   await page.goto('/test/sql');
   for (let i = 0; i < 5; i++) {
     await page.locator('#pin').fill('0000');
@@ -112,8 +107,7 @@ test('proctor board shows PIN and student status', async ({ page }) => {
 
 test('python runner works in the browser (Pyodide worker)', async ({ page }) => {
   test.setTimeout(240_000);
-  await register(page, 'Py Student');
-  await completeWizard(page, 'Python');
+  await onboard(page, 'Py Student', 'Python');
   await page.goto('/test/python');
   await page.getByText('On my own').click();
   await page.getByRole('button', { name: 'Start test' }).click();

@@ -36,15 +36,15 @@ export async function testProgress(profileId: string) {
  */
 export async function syncFlowStep(profileId: string): Promise<FlowStep> {
   const db = adminClient();
-  const { data: profile, error } = await db.from('profiles').select('wizard_step, current_step').eq('id', profileId).single();
+  const { data: profile, error } = await db.from('profiles').select('wizard_step, current_step, target_role_id').eq('id', profileId).single();
   const progress = await testProgress(profileId);
   if (error) {
-    // current_step column missing (migration 0005 not applied yet): derive only, don't store.
+    // Newer columns missing (migration not applied yet): derive only, don't store, never trap on 'roles'.
     const { data: p } = await db.from('profiles').select('wizard_step').eq('id', profileId).single();
-    return computeStep({ wizardStep: p?.wizard_step ?? 0, ...progress });
+    return computeStep({ wizardStep: p?.wizard_step ?? 0, hasTargetRole: true, ...progress });
   }
   const stored = isFlowStep(profile.current_step) ? profile.current_step : null;
-  const step = laterStep(stored, computeStep({ wizardStep: profile.wizard_step ?? 0, ...progress }));
+  const step = laterStep(stored, computeStep({ wizardStep: profile.wizard_step ?? 0, hasTargetRole: !!profile.target_role_id, ...progress }));
   if (step !== stored) await db.from('profiles').update({ current_step: step }).eq('id', profileId);
   return step;
 }
