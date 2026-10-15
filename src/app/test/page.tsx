@@ -3,11 +3,15 @@ import { AppHeader } from '@/components/AppHeader';
 import { BadgeChip, LevelChip } from '@/components/Badges';
 import { PendingSubmitter } from '@/components/PendingSubmitter';
 import { RunnerStatus } from '@/components/RunnerStatus';
+import { GenerateTestButton } from '@/components/test/GenerateTestButton';
+import { pluralKey } from '@/i18n';
 import { getT } from '@/i18n/server';
 import { requireSession } from '@/lib/auth';
 import { skillOverview, type SkillOverviewRow } from '@/lib/candidate-data';
+import { generationStatus } from '@/lib/ai/skill-tests';
 import { STEP_HOME, requiredTests } from '@/lib/flow';
-import { syncFlowStep } from '@/lib/flow-server';
+import { syncFlowStep, testProgress } from '@/lib/flow-server';
+import { canonicalSkillName, normSkill } from '@/lib/skill-alias';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,13 +19,18 @@ export const dynamic = 'force-dynamic';
 export default async function TestHub() {
   const { supabase, profile } = await requireSession(['candidate']);
   const { t } = getT();
-  const [{ rows, others }, step] = await Promise.all([skillOverview(supabase, profile.id), syncFlowStep(profile.id)]);
+  const [{ rows, others }, step, progress] = await Promise.all([
+    skillOverview(supabase, profile.id), syncFlowStep(profile.id), testProgress(profile.id),
+  ]);
 
   const declared = rows.filter((r) => r.claimed);
   const extra = rows.filter((r) => !r.claimed);
-  const completed = rows.filter((r) => r.score).length;
-  const required = requiredTests(declared.filter((r) => r.testable).length);
+  const completed = progress.completedTests;
+  const required = requiredTests(progress);
   const unlocked = completed >= required || step === 'done';
+  // Declared skills whose AI test recently failed to generate: shown as "not available yet".
+  const failed = await generationStatus(declared.filter((r) => !r.testable).map((r) => normSkill(canonicalSkillName(r.name))));
+  const isUnavailable = (r: SkillOverviewRow) => !r.testable && failed.has(normSkill(canonicalSkillName(r.name)));
   const kinds = rows.filter((r) => r.slug === 'python' || r.slug === 'sql').map((r) => r.slug as 'python' | 'sql');
 
   return (
@@ -30,20 +39,24 @@ export default async function TestHub() {
       <main className="mx-auto max-w-2xl space-y-5 px-4 pb-28 pt-5">
         <div>
           <h1 className="text-2xl font-bold">{t('hub.title')}</h1>
-          <p className="mt-1 text-sm text-slate-600">{t('hub.intro', { n: required })}</p>
+          {required > 0 && <p className="mt-1 text-sm text-slate-600">{t(pluralKey('hub.intro', required), { n: required })}</p>}
         </div>
         <PendingSubmitter />
 
-        <div className="card">
-          <div className="flex items-center justify-between text-sm font-medium">
-            <span>{t('hub.progress', { done: Math.min(completed, required), total: required })}</span>
-            <RunnerStatus kinds={kinds} />
+        {required === 0 ? (
+          <p role="status" className="card border-brand-100 bg-brand-50 text-sm text-brand-700">{t('hub.fallback')}</p>
+        ) : (
+          <div className="card">
+            <div className="flex items-center justify-between text-sm font-medium">
+              <span>{t(pluralKey('hub.progress', required), { done: Math.min(completed, required), total: required })}</span>
+              <RunnerStatus kinds={kinds} />
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100" role="progressbar"
+              aria-valuemin={0} aria-valuemax={required} aria-valuenow={Math.min(completed, required)}>
+              <div className="h-full rounded-full bg-brand-600 transition-all" style={{ width: `${Math.min(100, (completed / required) * 100)}%` }} />
+            </div>
           </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100" role="progressbar"
-            aria-valuemin={0} aria-valuemax={required} aria-valuenow={Math.min(completed, required)}>
-            <div className="h-full rounded-full bg-brand-600 transition-all" style={{ width: `${Math.min(100, (completed / required) * 100)}%` }} />
-          </div>
-        </div>
+        )}
 
         <section>
           <h2 className="mb-2 text-lg font-semibold">{t('hub.yourSkills')}</h2>
@@ -54,7 +67,7 @@ export default async function TestHub() {
             </div>
           ) : (
             <ul className="space-y-2">
-              {declared.map((r) => <SkillRow key={r.name} r={r} t={t} />)}
+              {declared.map((r) => <SkillRow key={r.name} r={r} t={t} unavailable={isUnavailable(r)} />)}
             </ul>
           )}
         </section>
@@ -62,7 +75,7 @@ export default async function TestHub() {
         {extra.length > 0 && (
           <section>
             <h2 className="mb-2 text-lg font-semibold">{t('hub.extraTested')}</h2>
-            <ul className="space-y-2">{extra.map((r) => <SkillRow key={r.name} r={r} t={t} />)}</ul>
+            <ul className="space-y-2">{extra.map((r) => <SkillRow key={r.name} r={r} t={t} unavailable={false} />)}</ul>
           </section>
         )}
 
@@ -92,7 +105,7 @@ export default async function TestHub() {
                 🔒 {t('hub.seeMatches')}
               </button>
               <p id="hub-gate" className="mt-1 text-center text-xs text-slate-600">
-                {t('hub.remaining', { n: required - completed })}
+                {t(pluralKey('hub.remaining', required - completed), { n: required - completed })}
               </p>
             </>
           )}
@@ -102,7 +115,9 @@ export default async function TestHub() {
   );
 }
 
-function SkillRow({ r, t }: { r: SkillOverviewRow; t: (k: string, v?: Record<string, string | number>) => string }) {
+function SkillRow({ r, t, unavailable }: {
+  r: SkillOverviewRow; t: (k: string, v?: Record<string, string | number>) => string; unavailable: boolean;
+}) {
   return (
     <li className="card flex items-center justify-between gap-3">
       <div className="min-w-0">
@@ -115,19 +130,22 @@ function SkillRow({ r, t }: { r: SkillOverviewRow; t: (k: string, v?: Record<str
             </>
           ) : r.score ? (
             <LevelChip level="needs_improvement" label={t('level.needs_improvement')} />
-          ) : r.testable ? (
-            <span className="text-xs text-slate-500">{t('dash.notTested')}</span>
+          ) : unavailable ? (
+            <span className="text-xs text-slate-500">{t('hub.unavailable')}</span>
           ) : (
-            <span className="text-xs text-slate-500">{t('hub.noTestYet')}</span>
+            <span className="text-xs text-slate-500">{t('dash.notTested')}</span>
           )}
           {r.kind && <span className="text-xs text-slate-500">· {t(`hub.kind.${r.kind}`)}</span>}
+          {(r.ai || (!r.testable && !unavailable)) && <span className="text-xs text-slate-500">· {t('hub.aiBadge')}</span>}
         </div>
       </div>
-      {r.testable && r.slug && (
+      {r.testable && r.slug ? (
         <Link href={`/test/${r.slug}`} className={r.score ? 'btn-secondary shrink-0 text-sm' : 'btn-primary shrink-0 text-sm'}>
           {r.score ? t('dash.retake') : t('test.start')}
         </Link>
-      )}
+      ) : !r.testable && !unavailable ? (
+        <GenerateTestButton skill={r.name} />
+      ) : null}
     </li>
   );
 }

@@ -6,11 +6,12 @@ export const dynamic = 'force-dynamic';
 
 export default async function WizardPage({ searchParams }: { searchParams: { step?: string } }) {
   const { supabase, user, profile } = await requireSession(['candidate']);
-  const [{ data: education }, { data: experience }, { data: claimed }, { data: skills }] = await Promise.all([
+  const [{ data: education }, { data: experience }, { data: claimed }, { data: skills }, { data: awards }] = await Promise.all([
     supabase.from('education').select('id, institution, degree, field, start_year, end_year, score').eq('profile_id', user.id).order('sort'),
     supabase.from('experience').select('id, type, title, organization, start_date, end_date, description').eq('profile_id', user.id).order('sort'),
     supabase.from('claimed_skills').select('skill_id, name').eq('profile_id', user.id),
-    supabase.from('skills').select('id, slug, name, category').eq('is_active', true).order('name'),
+    supabase.from('skills').select('*').eq('is_active', true).order('name'),
+    supabase.from('awards').select('id, name, issuer, year').eq('profile_id', user.id).order('sort'),
   ]);
 
   const requested = Number(searchParams.step);
@@ -21,6 +22,7 @@ export default async function WizardPage({ searchParams }: { searchParams: { ste
     experience: (experience ?? []) as WizardData['experience'],
     skills: (claimed ?? []) as WizardData['skills'],
     summary: profile.summary ?? '',
+    awards: (awards ?? []) as WizardData['awards'],
   };
 
   return (
@@ -32,7 +34,7 @@ export default async function WizardPage({ searchParams }: { searchParams: { ste
           initial={initial}
           startStep={startStep}
           wizardStep={profile.wizard_step}
-          catalog={(skills ?? []) as { id: string; slug: string; name: string; category: string }[]}
+          catalog={((skills ?? []) as { id: string; slug: string; name: string; category: string; ai_generated?: boolean }[]).filter((s) => !s.ai_generated)}
           done={profile.wizard_step >= 4}
         />
       </main>

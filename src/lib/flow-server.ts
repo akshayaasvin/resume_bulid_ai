@@ -1,9 +1,10 @@
 import 'server-only';
 import { adminClient } from './supabase/admin';
 import { computeStep, isFlowStep, laterStep, type FlowStep } from './flow';
-import { findCatalogSkill } from './skill-alias';
+import { canonicalSkillName, findCatalogSkill, normSkill } from './skill-alias';
+import { generationStatus } from './ai/skill-tests';
 
-/** Counts the candidate's tested skills and testable declared skills. */
+/** Counts the candidate's tested skills and how many declared skills have / can get / can't get a test. */
 export async function testProgress(profileId: string) {
   const db = adminClient();
   const [{ data: claimed }, { data: catalog }, { count }] = await Promise.all([
@@ -13,10 +14,17 @@ export async function testProgress(profileId: string) {
   ]);
   const cat = (catalog ?? []) as { id: string; name: string }[];
   const ids = new Set(cat.map((c) => c.id));
-  const testableDeclared = (claimed ?? []).filter(
-    (c) => (c.skill_id && ids.has(c.skill_id)) || findCatalogSkill(c.name as string, cat),
-  ).length;
-  return { completedTests: count ?? 0, testableDeclared };
+  const rows = (claimed ?? []) as { skill_id: string | null; name: string }[];
+  const untested = rows.filter((c) => !((c.skill_id && ids.has(c.skill_id)) || findCatalogSkill(c.name, cat)));
+  const keys = untested.map((c) => normSkill(canonicalSkillName(c.name)));
+  const failed = await generationStatus(keys);
+  const unavailable = keys.filter((k) => failed.has(k)).length;
+  return {
+    completedTests: count ?? 0,
+    testable: rows.length - untested.length,
+    waiting: untested.length - unavailable,
+    unavailable,
+  };
 }
 
 /**

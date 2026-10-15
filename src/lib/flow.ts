@@ -11,10 +11,24 @@ export const STEP_HOME: Record<FlowStep, string> = {
   done: '/dashboard',
 };
 
-/** Minimum completed tests before the next step unlocks: 3, or all testable declared skills if fewer (at least 1). */
+/**
+ * The candidate's declared skills, by test availability:
+ * - testable: a test exists (question bank or a cached AI-generated test);
+ * - waiting: no test yet, but one can still be generated on demand;
+ * - unavailable: no test and generation recently failed (or the name isn't a testable skill).
+ */
+export interface SkillTestAvailability { testable: number; waiting: number; unavailable: number }
+
+/**
+ * Minimum completed tests before job matches unlock: 3, or every testable declared skill if fewer.
+ * Never a dead end: if none of the declared skills can get a test, nothing is required (0).
+ */
 export const MIN_TESTS = 3;
-export function requiredTests(testableDeclared: number): number {
-  return Math.max(1, Math.min(MIN_TESTS, testableDeclared));
+export function requiredTests(a: SkillTestAvailability): number {
+  if (a.testable > 0) return Math.min(MIN_TESTS, a.testable);
+  if (a.waiting > 0) return 1; // generate + take one
+  if (a.unavailable > 0) return 0; // tests for their skills are being prepared: don't block
+  return 1; // no skills declared: take any test from the catalogue
 }
 
 export function isFlowStep(v: unknown): v is FlowStep {
@@ -28,9 +42,9 @@ export function laterStep(a: FlowStep | null, b: FlowStep): FlowStep {
   return a && rank(a) > rank(b) ? a : b;
 }
 
-export function computeStep(input: { wizardStep: number; completedTests: number; testableDeclared: number }): FlowStep {
+export function computeStep(input: { wizardStep: number; completedTests: number } & SkillTestAvailability): FlowStep {
   if (input.wizardStep < 4) return 'wizard';
-  if (input.completedTests < requiredTests(input.testableDeclared)) return 'tests';
+  if (input.completedTests < requiredTests(input)) return 'tests';
   return 'done';
 }
 

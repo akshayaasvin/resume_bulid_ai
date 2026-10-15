@@ -30,6 +30,13 @@ const experienceItem = z.object({
 
 const skillItem = z.object({ skill_id: z.string().uuid().nullable(), name: text(60).min(1) });
 
+const awardItem = z.object({
+  id: z.string().uuid(),
+  name: text(150).min(2),
+  issuer: text(150).nullable().optional(),
+  year,
+});
+
 const schema = z.discriminatedUnion('step', [
   z.object({ step: z.literal(1), advance: z.boolean().default(false), education: z.array(educationItem).max(10) }),
   z.object({ step: z.literal(2), advance: z.boolean().default(false), experience: z.array(experienceItem).max(15) }),
@@ -39,6 +46,8 @@ const schema = z.discriminatedUnion('step', [
     skills: z.array(skillItem).max(30),
     summary: text(800).nullable().optional(),
   }),
+  // Awards & certificates (part of step 3, saved separately so an unfinished card can't block skills)
+  z.object({ step: z.literal('awards'), awards: z.array(awardItem).max(20) }),
 ]);
 
 /**
@@ -59,7 +68,7 @@ export async function PUT(req: Request) {
   const body = parsed.data;
   const uid = user.id;
 
-  async function syncRows(table: 'education' | 'experience', rows: Record<string, unknown>[]) {
+  async function syncRows(table: 'education' | 'experience' | 'awards', rows: Record<string, unknown>[]) {
     if (rows.length) {
       const { error } = await supabase.from(table).upsert(rows);
       if (error) throw error;
@@ -72,6 +81,10 @@ export async function PUT(req: Request) {
   }
 
   try {
+    if (body.step === 'awards') {
+      await syncRows('awards', body.awards.map((a, i) => ({ ...a, issuer: a.issuer || null, year: a.year ?? null, profile_id: uid, sort: i })));
+      return Response.json({ ok: true });
+    }
     if (body.step === 1) {
       await syncRows('education', body.education.map((e, i) => ({ ...e, profile_id: uid, sort: i })));
     } else if (body.step === 2) {

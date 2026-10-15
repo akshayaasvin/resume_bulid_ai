@@ -5,6 +5,9 @@ export type Lang = 'en' | 'ta';
 export type Dict = Record<string, string>;
 export const dictionaries: Record<Lang, Dict> = { en, ta };
 
+/** Key for a count: `${base}.one` when n is 1, else `${base}.other` (English and Tamil both need just these two). */
+export const pluralKey = (base: string, n: number) => `${base}.${n === 1 ? 'one' : 'other'}`;
+
 /** Lookup with English fallback and {placeholder} interpolation. */
 export function translate(lang: Lang, key: string, vars?: Record<string, string | number>): string {
   let s = dictionaries[lang]?.[key] ?? dictionaries.en[key] ?? key;

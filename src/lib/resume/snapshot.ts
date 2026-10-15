@@ -16,6 +16,8 @@ export interface ResumeSnapshot {
   experience: { type: 'internship' | 'job' | 'project'; title: string; organization: string | null; period: string; bullets: string[] }[];
   verifiedSkills: { name: string; level: SkillLevel; badge: Badge; scorePct: number }[];
   otherSkills: string[];
+  /** Awards & certificates. Absent on older snapshots. */
+  awards?: { name: string; issuer: string | null; year: number | null }[];
   generatedAt: string;
 }
 
@@ -29,6 +31,7 @@ export interface SnapshotInput {
   experience: { type: 'internship' | 'job' | 'project'; title: string; organization: string | null; start_date: string | null; end_date: string | null; bullets: string[]; description: string | null; sort: number }[];
   claimed: { skill_id: string | null; name: string }[];
   scores: { skill_id: string; skill_name: string; score_pct: number; level: SkillLevel; badge: Badge }[];
+  awards?: { name: string; issuer: string | null; year: number | null; sort: number }[];
 }
 
 const sameText = (a: string, b: string) => a.replace(/\s+/g, ' ').trim().toLowerCase() === b.replace(/\s+/g, ' ').trim().toLowerCase();
@@ -94,6 +97,7 @@ export function buildSnapshot(input: SnapshotInput, cfg: ScoringConfig, now = ne
       })),
     verifiedSkills,
     otherSkills,
+    awards: [...(input.awards ?? [])].sort((a, b) => a.sort - b.sort).map(({ name, issuer, year }) => ({ name, issuer, year })),
     generatedAt: now.toISOString(),
   };
 }

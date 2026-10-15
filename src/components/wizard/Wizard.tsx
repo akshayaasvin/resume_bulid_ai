@@ -6,6 +6,7 @@ import { putJson, useAutosave, type SaveResult, type SaveState } from '@/lib/use
 import {
   EDU_FIELDS, educationValid, isBlankEducation, sanitizeScoreInput, validateEducation, yearMax, type EduError, type EduField,
 } from '@/lib/education-validation';
+import { AWARD_FIELDS, awardsValid, isBlankAward, validateAward, type AwardField } from '@/lib/award-validation';
 import { canonicalSkillName, findCatalogSkill, normSkill, suggestSkills } from '@/lib/skill-alias';
 import { RunnerStatus } from '../RunnerStatus';
 import type { RunnerKind } from '@/lib/runner/client';
@@ -19,12 +20,14 @@ export interface ExperienceRow {
   start_date: string | null; end_date: string | null; description: string | null;
 }
 export interface SkillRow { skill_id: string | null; name: string }
-export interface WizardData { education: EducationRow[]; experience: ExperienceRow[]; skills: SkillRow[]; summary: string }
+export interface AwardRow { id: string; name: string; issuer: string | null; year: number | null }
+export interface WizardData { education: EducationRow[]; experience: ExperienceRow[]; skills: SkillRow[]; summary: string; awards: AwardRow[] }
 
 interface CatalogSkill { id: string; slug: string; name: string; category: string }
 
 const uuid = () => crypto.randomUUID();
 const emptyEdu = (): EducationRow => ({ id: uuid(), institution: '', degree: '', field: '', start_year: null, end_year: null, score: '' });
+const emptyAward = (): AwardRow => ({ id: uuid(), name: '', issuer: '', year: null });
 const emptyExp = (): ExperienceRow => ({ id: uuid(), type: 'project', title: '', organization: '', start_date: '', end_date: '', description: '' });
 
 const SUGGESTED = ['MS Word', 'PowerPoint', 'Java', 'C', 'C++', 'HTML/CSS', 'JavaScript', 'Tally', 'Canva', 'AutoCAD', 'Teamwork', 'Public speaking'];
@@ -70,6 +73,7 @@ export function Wizard({ userId, initial, startStep, wizardStep, catalog, done }
   const [experience, setExperience] = useState<ExperienceRow[]>(initial.experience);
   const [skills, setSkills] = useState<SkillRow[]>(initial.skills);
   const [summary, setSummary] = useState(initial.summary);
+  const [awards, setAwards] = useState<AwardRow[]>(initial.awards ?? []);
   const [custom, setCustom] = useState('');
 
   // Steps the candidate has moved past. Sent with every background save so the server records
@@ -82,6 +86,12 @@ export function Wizard({ userId, initial, startStep, wizardStep, catalog, done }
   );
   const expSave = useAutosave<ExperienceRow[]>(`wizard:${userId}:2`, (rows) => put({ step: 2, advance: advanced.current.has(2), experience: validExp(rows) }));
   const skillSave = useAutosave<{ skills: SkillRow[]; summary: string }>(`wizard:${userId}:3`, (d) => put({ step: 3, ...d }));
+  // Awards save on their own, with the same validation / offline handling as Education.
+  const awardSave = useAutosave<AwardRow[]>(
+    `wizard:${userId}:awards`,
+    (rows) => put({ step: 'awards', awards: rows.filter((a) => !isBlankAward(a)) }),
+    { canSave: (rows) => awardsValid(rows) },
+  );
 
   // Inline validation for Education: shown once a field is left, or for everything after "Next".
   const eduErrors = useMemo(() => education.map((e) => validateEducation(e)), [education]);
@@ -93,11 +103,20 @@ export function Wizard({ userId, initial, startStep, wizardStep, catalog, done }
   const fieldId = (rowId: string, f: EduField) => `edu-${rowId}-${f}`;
   const invalidCls = (bad: unknown) => (bad ? ' border-red-500 focus:border-red-500 focus:ring-red-200' : '');
 
+  const awardErrors = useMemo(() => awards.map((a) => validateAward(a)), [awards]);
+  const [showAllAwardErrors, setShowAllAwardErrors] = useState(false);
+  const awardError = (i: number, f: AwardField) =>
+    showAllAwardErrors || touched.has(`aw:${awards[i].id}:${f}`) ? awardErrors[i]?.[f] : undefined;
+  const touchAward = (rowId: string, f: AwardField) => setTouched((s) => (s.has(`aw:${rowId}:${f}`) ? s : new Set(s).add(`aw:${rowId}:${f}`)));
+  const awardFieldId = (rowId: string, f: AwardField) => `award-${rowId}-${f}`;
+  const updAwards = (rows: AwardRow[]) => { setAwards(rows); awardSave.queue(rows); };
+
   // Restore unsynced drafts left on this phone (e.g. WiFi dropped before the save landed).
   useEffect(() => {
     const e = eduSave.readDraft(); if (e) { setEducation(e); eduSave.queue(e); }
     const x = expSave.readDraft(); if (x) { setExperience(x); expSave.queue(x); }
     const s = skillSave.readDraft(); if (s) { setSkills(s.skills); setSummary(s.summary); skillSave.queue(s); }
+    const a = awardSave.readDraft(); if (a) { setAwards(a); awardSave.queue(a); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -105,9 +124,10 @@ export function Wizard({ userId, initial, startStep, wizardStep, catalog, done }
   const { flush: flushEdu } = eduSave;
   const { flush: flushExp } = expSave;
   const { flush: flushSkills } = skillSave;
+  const { flush: flushAwards } = awardSave;
   useEffect(() => {
-    void flushEdu(); void flushExp(); void flushSkills();
-  }, [step, flushEdu, flushExp, flushSkills]);
+    void flushEdu(); void flushExp(); void flushSkills(); void flushAwards();
+  }, [step, flushEdu, flushExp, flushSkills, flushAwards]);
 
   const runnerKinds = useMemo<RunnerKind[]>(() => {
     const slugs = new Set(skills.map((s) => catalog.find((c) => c.id === s.skill_id)?.slug ?? s.name.toLowerCase()));
@@ -190,13 +210,24 @@ export function Wizard({ userId, initial, startStep, wizardStep, catalog, done }
       return;
     }
     // Step 3 finishes the profile: the next page is server-gated, so this one must reach the server.
+    const badAward = awards.findIndex((_, i) => AWARD_FIELDS.some((f) => awardErrors[i]?.[f]));
+    if (badAward >= 0) {
+      setShowAllAwardErrors(true);
+      setError(t('wizard.fixFields'));
+      const f = AWARD_FIELDS.find((k) => awardErrors[badAward]?.[k])!;
+      const el = document.getElementById(awardFieldId(awards[badAward].id, f));
+      el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      el?.focus({ preventScroll: true });
+      return;
+    }
     setBusy(true);
     try {
       // Re-send every section (not just pending ones) so an earlier failed background save can't be skipped.
       eduSave.queue(education);
       expSave.queue(experience);
       skillSave.queue({ skills, summary });
-      for (const pending of [eduSave.flush, expSave.flush, skillSave.flush]) {
+      awardSave.queue(awards);
+      for (const pending of [eduSave.flush, expSave.flush, skillSave.flush, awardSave.flush]) {
         const r = await pending();
         if (r && r !== 'ok') { setError(saveMessage(r)); return; }
       }
@@ -210,9 +241,9 @@ export function Wizard({ userId, initial, startStep, wizardStep, catalog, done }
   }
 
   // Background saves from earlier steps still matter (e.g. Education saved offline while on step 2).
-  const allStates = [eduSave.state, expSave.state, skillSave.state];
+  const allStates = [eduSave.state, expSave.state, skillSave.state, awardSave.state];
   const saveState: SaveState = (['rejected', 'error', 'offline'] as const).find((s) => allStates.includes(s))
-    ?? (step === 1 ? eduSave.state : step === 2 ? expSave.state : skillSave.state);
+    ?? (step === 1 ? eduSave.state : step === 2 ? expSave.state : awardSave.state === 'saving' ? 'saving' : skillSave.state);
   const titles = ['wizard.education', 'wizard.experience', 'wizard.skills'];
 
   return (
@@ -402,6 +433,49 @@ export function Wizard({ userId, initial, startStep, wizardStep, catalog, done }
             <textarea id="summary" className="input min-h-[96px]" value={summary} maxLength={800}
               onChange={(e) => { setSummary(e.target.value); updSkills(skills, e.target.value); }} />
           </div>
+
+          <section className="space-y-3 pt-2" aria-labelledby="awards-heading">
+            <div>
+              <h2 id="awards-heading" className="text-lg font-semibold">{t('wizard.awards')}</h2>
+              <p className="text-sm text-slate-600">{t('wizard.awardsHint')}</p>
+            </div>
+            {awards.map((a, i) => (
+              <fieldset key={a.id} className="card space-y-3">
+                <div>
+                  <label className="label" htmlFor={awardFieldId(a.id, 'name')}>{t('wizard.awardName')}</label>
+                  <input id={awardFieldId(a.id, 'name')} className={`input${invalidCls(awardError(i, 'name'))}`} value={a.name} maxLength={150}
+                    aria-invalid={!!awardError(i, 'name')} aria-describedby={`${awardFieldId(a.id, 'name')}-err`}
+                    onBlur={() => touchAward(a.id, 'name')}
+                    onChange={(ev) => updAwards(awards.map((x, j) => (j === i ? { ...x, name: ev.target.value } : x)))} />
+                  <FieldError id={`${awardFieldId(a.id, 'name')}-err`} code={awardError(i, 'name')} />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2">
+                    <label className="label" htmlFor={awardFieldId(a.id, 'issuer')}>{t('wizard.awardIssuer')}</label>
+                    <input id={awardFieldId(a.id, 'issuer')} className="input" value={a.issuer ?? ''} maxLength={150}
+                      onChange={(ev) => updAwards(awards.map((x, j) => (j === i ? { ...x, issuer: ev.target.value } : x)))} />
+                  </div>
+                  <div>
+                    <label className="label" htmlFor={awardFieldId(a.id, 'year')}>{t('wizard.awardYear')}</label>
+                    <input id={awardFieldId(a.id, 'year')} className={`input${invalidCls(awardError(i, 'year'))}`}
+                      inputMode="numeric" pattern="[0-9]*" maxLength={4} value={a.year ?? ''}
+                      aria-invalid={!!awardError(i, 'year')} aria-describedby={`${awardFieldId(a.id, 'year')}-err`}
+                      onBlur={() => touchAward(a.id, 'year')}
+                      onChange={(ev) => updAwards(awards.map((x, j) => (j === i ? { ...x, year: toYear(ev.target.value.replace(/\D/g, '')) } : x)))} />
+                    <FieldError id={`${awardFieldId(a.id, 'year')}-err`} code={awardError(i, 'year')} />
+                  </div>
+                </div>
+                <button type="button" className="text-sm text-red-600" onClick={() => updAwards(awards.filter((_, j) => j !== i))}>
+                  {t('common.remove')}
+                </button>
+              </fieldset>
+            ))}
+            {awards.length < 20 && (
+              <button type="button" className="btn-ghost w-full" onClick={() => updAwards([...awards, emptyAward()])}>
+                + {t('wizard.addAward')}
+              </button>
+            )}
+          </section>
         </div>
       )}
 

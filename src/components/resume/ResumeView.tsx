@@ -59,6 +59,19 @@ export function ResumeView({ s, showPct }: { s: ResumeSnapshot; showPct: boolean
       {work.length > 0 && <Section title="Experience"><Entries items={work} /></Section>}
       {projects.length > 0 && <Section title="Projects"><Entries items={projects} /></Section>}
 
+      {s.awards && s.awards.length > 0 && (
+        <Section title="Awards & Certificates">
+          <ul className="space-y-0.5">
+            {s.awards.map((a, i) => (
+              <li key={i} className="flex justify-between gap-2">
+                <span><span className="font-semibold">{a.name}</span>{a.issuer ? ` — ${a.issuer}` : ''}</span>
+                {a.year && <span className="shrink-0 text-slate-600">{a.year}</span>}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
       {s.otherSkills.length > 0 && (
         <Section title="Other Skills (self-declared)"><p>{s.otherSkills.join(' · ')}</p></Section>
       )}

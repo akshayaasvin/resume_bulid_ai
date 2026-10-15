@@ -123,6 +123,18 @@ export function ResumeDocument({ s, showPct, version }: { s: ResumeSnapshot; sho
 
         {work.length > 0 && <Section title="Experience"><Entries items={work} /></Section>}
         {projects.length > 0 && <Section title="Projects"><Entries items={projects} /></Section>}
+        {s.awards && s.awards.length > 0 && (
+          <Section title="Awards & Certificates">
+            {s.awards.map((a, i) => (
+              <View key={i} style={[styles.row, { marginBottom: 2 }]} wrap={false}>
+                <Text style={{ flex: 1 }}>
+                  <Text style={styles.bold}>{a.name}</Text>{a.issuer ? ` — ${a.issuer}` : ''}
+                </Text>
+                {a.year ? <Text style={styles.muted}>{a.year}</Text> : null}
+              </View>
+            ))}
+          </Section>
+        )}
         {s.otherSkills.length > 0 && (
           <Section title="Other Skills (self-declared)"><Text>{s.otherSkills.join('  ·  ')}</Text></Section>
         )}
