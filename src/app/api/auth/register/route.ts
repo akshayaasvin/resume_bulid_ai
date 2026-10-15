@@ -39,6 +39,8 @@ const schema = z.object({
   college_name: z.string().trim().min(3).max(150).optional().or(z.literal('')),
   batch_code: z.string().trim().toUpperCase().max(32).optional().or(z.literal('')),
   whatsapp_opt_in: z.boolean().default(false),
+  /** Must be true: the Privacy Policy and Terms (which cover WhatsApp updates) were accepted. */
+  agreed_to_policy: z.boolean().optional(),
   language: z.enum(['en', 'ta']).default('en'),
   /** Goal-based onboarding (steps 1-4) and education (step 6). Absent for the legacy form. */
   onboarding: onboardingAnswersSchema.optional(),
@@ -49,6 +51,7 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: 'invalid_input', issues: parsed.error.issues }, { status: 400 });
   const input = parsed.data;
+  if (input.agreed_to_policy !== true) return Response.json({ error: 'policy_required' }, { status: 400 });
 
   const phone = normalizeIndianPhone(input.phone);
   if (!phone) return Response.json({ error: 'invalid_phone' }, { status: 400 });
@@ -114,8 +117,11 @@ export async function POST(req: Request) {
     year: input.year ?? null,
     college_id: collegeId,
     workshop_id: workshopId,
-    whatsapp_opt_in: input.whatsapp_opt_in,
-    opt_in_at: input.whatsapp_opt_in ? new Date().toISOString() : null,
+    // Consent for WhatsApp updates is part of the accepted Privacy Policy (switchable off later).
+    whatsapp_opt_in: true,
+    opt_in_at: new Date().toISOString(),
+    agreed_to_policy: true,
+    agreed_at: new Date().toISOString(),
     language: input.language,
     // Onboarding collects skills + education up front, so the profile is complete: go to tests.
     wizard_step: ob ? 4 : 1,

@@ -28,7 +28,8 @@ interface State {
   college_id: string; college_other: boolean; college_name: string;
   department: string; year: string;
   education: Edu[];
-  opt_in: boolean;
+  /** Agreed to the Privacy Policy and Terms (also consent for WhatsApp messages). */
+  agreed: boolean;
 }
 
 const STORAGE_KEY = 'onboarding:v1';
@@ -37,7 +38,7 @@ const newEdu = (): Edu => ({ id: crypto.randomUUID(), institution: '', degree: '
 const initialState = (): State => ({
   step: 1, goal: null, english_level: null, tamil_level: null, soft_skills: [], tech_skills: [],
   full_name: '', phone: '', email: '', college_id: '', college_other: false, college_name: '', department: '', year: '',
-  education: [newEdu()], opt_in: false,
+  education: [newEdu()], agreed: false,
 });
 const toYear = (v: string) => (v ? Number(v) : null);
 const has = (list: string[], s: string) => list.some((x) => normSkill(x) === normSkill(s));
@@ -45,6 +46,7 @@ const has = (list: string[], s: string) => list.some((x) => normSkill(x) === nor
 const SERVER_ERRORS: Record<string, string> = {
   phone_taken: 'auth.phoneTaken', invalid_phone: 'auth.invalidPhone', invalid_batch: 'auth.invalidBatch',
   rate_limited: 'auth.rateLimited', invalid_education: 'wizard.fixFields', invalid_college: 'wizard.err.junk',
+  policy_required: 'ob.agree.required',
 };
 
 export function Onboarding({ colleges, batch }: {
@@ -139,7 +141,7 @@ export function Onboarding({ colleges, batch }: {
           college_id: batch || s.college_other ? '' : s.college_id,
           college_name: !batch && s.college_other ? s.college_name.trim() : '',
           batch_code: batch?.code ?? '',
-          whatsapp_opt_in: s.opt_in,
+          agreed_to_policy: s.agreed,
           language: lang,
           onboarding: {
             goal: s.goal, english_level: s.english_level, tamil_level: s.tamil_level,
@@ -467,10 +469,12 @@ export function Onboarding({ colleges, batch }: {
           )}
 
           <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-3">
-            <input type="checkbox" className="mt-1 h-5 w-5" checked={s.opt_in} onChange={(e) => update({ opt_in: e.target.checked })} />
+            <input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={s.agreed} required
+              onChange={(e) => update({ agreed: e.target.checked })} />
             <span className="text-sm text-slate-700">
-              {t('auth.optIn')}
-              <span className="mt-0.5 block text-xs text-slate-500">{t('ob.optInHint')}</span>
+              {t('ob.agree.before')}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-brand-700 underline">{t('ob.agree.link')}</a>
+              {t('ob.agree.after')}
             </span>
           </label>
           <p className="text-center text-sm">
@@ -494,7 +498,7 @@ export function Onboarding({ colleges, batch }: {
               </button>
             )
           ) : (
-            <button type="button" className="btn-primary flex-[2]" onClick={submit} disabled={busy}>
+            <button type="button" className="btn-primary flex-[2]" onClick={submit} disabled={busy || !s.agreed}>
               {busy ? t('common.loading') : t('ob.create')}
             </button>
           )}

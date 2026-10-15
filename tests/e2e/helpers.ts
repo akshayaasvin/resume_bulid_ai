@@ -30,6 +30,7 @@ export async function onboard(page: Page, name = 'Test Student', skill = 'Excel'
   await page.locator('#ob-password').fill('secret12');
   await page.locator('[id$="-institution"]').first().fill('Demo College of Engineering');
   await page.locator('[id$="-degree"]').first().fill('B.E.');
+  await page.getByRole('checkbox', { name: /I agree to the Privacy Policy/ }).check();
   await page.getByRole('button', { name: 'Create my account' }).click();
   await page.waitForURL('**/test');
   return phone;
