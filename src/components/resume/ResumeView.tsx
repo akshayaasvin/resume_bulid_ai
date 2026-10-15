@@ -35,6 +35,9 @@ export function ResumeView({ s, showPct }: { s: ResumeSnapshot; showPct: boolean
                 {v.badge === 'verified' && (
                   <span className="rounded bg-brand-100 px-1.5 py-0.5 text-[11px] font-semibold text-brand-800">✓ Verified</span>
                 )}
+                {v.codingVerified && (
+                  <span className="rounded bg-brand-100 px-1.5 py-0.5 text-[11px] font-semibold text-brand-800">✓ Coding verified</span>
+                )}
               </li>
             ))}
           </ul>

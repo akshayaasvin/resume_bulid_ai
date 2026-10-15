@@ -3,6 +3,8 @@ import { adminClient } from '@/lib/supabase/admin';
 import { renderFittedResumePdf, type FitStatus } from '@/lib/resume/pdf';
 import type { ResumeSnapshot } from '@/lib/resume/snapshot';
 import { isTemplateId, recommendTemplate, type TemplateId } from '@/lib/resume/templates';
+import { codingCacheKey, withCodingBadges } from '@/lib/resume/coding-badges';
+import { codingVerifiedSkills } from '@/lib/resume/coding-badges-server';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -34,7 +36,8 @@ export async function GET(req: Request, { params }: { params: { version: string 
   const inline = url.searchParams.get('inline') === '1';
 
   const showPct = profile.show_score_pct;
-  const objectPath = `${profile.id}/v${version}-${template}${showPct ? '-pct' : ''}.pdf`;
+  const coding = await codingVerifiedSkills(profile.id);
+  const objectPath = `${profile.id}/v${version}-${template}${showPct ? '-pct' : ''}${codingCacheKey(coding)}.pdf`;
   const storage = adminClient().storage.from('resumes');
 
   let pdf: Buffer | null = null;
@@ -47,7 +50,7 @@ export async function GET(req: Request, { params }: { params: { version: string 
     if (meta.data) status = ((await meta.data.text()).trim() as FitStatus) || 'ok';
   }
   if (!pdf) {
-    const fitted = await renderFittedResumePdf(resume.snapshot as ResumeSnapshot, showPct, version, template);
+    const fitted = await renderFittedResumePdf(withCodingBadges(resume.snapshot as ResumeSnapshot, coding), showPct, version, template);
     pdf = fitted.pdf;
     status = fitted.status;
     const up = await storage.upload(objectPath, pdf, { contentType: 'application/pdf', upsert: true });

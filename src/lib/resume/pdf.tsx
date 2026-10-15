@@ -114,6 +114,7 @@ function VerifiedSkills({ s, st, showPct }: { s: ResumeSnapshot; st: Styles; sho
           <Text style={st.bold}>{v.name}</Text>
           <Text>{`  ${LEVEL_LABEL[v.level]}${showPct ? ` · ${Math.round(v.scorePct)}%` : ''}`}</Text>
           {v.badge === 'campus_verified' ? <Text style={st.pill}>CAMPUS VERIFIED</Text> : <Text style={st.pillLight}>VERIFIED</Text>}
+          {v.codingVerified ? <Text style={st.pillLight}>CODING VERIFIED</Text> : null}
         </View>
       ))}
       <Text style={[st.small, st.muted, { marginTop: 1 }]}>Verified by a timed skill assessment on Resume Build AI.</Text>

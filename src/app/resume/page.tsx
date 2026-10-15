@@ -10,6 +10,8 @@ import { requireSession } from '@/lib/auth';
 import type { ResumeSnapshot } from '@/lib/resume/snapshot';
 import { isTemplateId, recommendTemplate } from '@/lib/resume/templates';
 import { SelfDeclaredSkills } from '@/components/resume/SelfDeclaredSkills';
+import { withCodingBadges } from '@/lib/resume/coding-badges';
+import { codingVerifiedSkills } from '@/lib/resume/coding-badges-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +26,7 @@ export default async function ResumePage({ searchParams }: { searchParams: { v?:
   const list = (versions ?? []) as { version: number; kind: string; snapshot: ResumeSnapshot; template_id?: string | null }[];
   const selected = list.find((r) => r.version === Number(searchParams.v)) ?? list[0];
   const recommended = recommendTemplate(p.target_role_id);
+  const coding = await codingVerifiedSkills(profile.id);
   // AI tailoring for a newly picked role runs in the background (a minute at most).
   const tailoringPending = tailoring?.status === 'pending' && Date.now() - new Date(tailoring.updated_at).getTime() < 2 * 60_000;
 
@@ -75,7 +78,7 @@ export default async function ResumePage({ searchParams }: { searchParams: { v?:
             <details className="rounded-xl border border-slate-200 bg-white">
               <summary className="cursor-pointer p-3 text-sm text-slate-700">{t('resume.textVersion')}</summary>
               <div className="overflow-x-auto border-t border-slate-200">
-                <ResumeView s={selected.snapshot} showPct={profile.show_score_pct} />
+                <ResumeView s={withCodingBadges(selected.snapshot, coding)} showPct={profile.show_score_pct} />
               </div>
             </details>
           </>

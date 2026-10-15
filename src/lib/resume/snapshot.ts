@@ -14,7 +14,8 @@ export interface ResumeSnapshot {
   summary: string | null;
   education: { institution: string; degree: string; field: string | null; years: string; score: string | null }[];
   experience: { type: 'internship' | 'job' | 'project'; title: string; organization: string | null; period: string; bullets: string[] }[];
-  verifiedSkills: { name: string; level: SkillLevel; badge: Badge; scorePct: number }[];
+  /** codingVerified: passed the optional coding round (added when shown, see coding-badges.ts). */
+  verifiedSkills: { name: string; level: SkillLevel; badge: Badge; scorePct: number; codingVerified?: boolean }[];
   otherSkills: string[];
   /** Awards & certificates. Absent on older snapshots. */
   awards?: { name: string; issuer: string | null; year: number | null }[];
