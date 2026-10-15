@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { educationValid, isValidScore, validateEducation, yearMax } from '@/lib/education-validation';
+import { educationValid, isValidScore, sanitizeScoreInput, validateEducation, yearMax } from '@/lib/education-validation';
 import { putJson } from '@/lib/useAutosave';
 
 const NOW = new Date('2026-10-15T00:00:00Z'); // max year = 2032
@@ -49,7 +49,30 @@ describe('validateEducation', () => {
 
 describe('isValidScore', () => {
   it.each(['8.4', '10', '0', '85', '85.5', '100', '92%', '7.25'])('accepts %s', (s) => expect(isValidScore(s)).toBe(true));
-  it.each(['Gh', '8.4 CGPA', '101', '-1', '8..4', '1000', '8.456', ''])('rejects %s', (s) => expect(isValidScore(s)).toBe(false));
+  it.each(['8.2 CGPA', '8.2CGPA', '8.2 cgpa', '9 GPA', '9gpa', '85 %', '85%', ' 7.5 Cgpa '])(
+    'accepts a suffix: %s', (s) => expect(isValidScore(s)).toBe(true));
+  it.each(['Gh', '101', '-1', '8..4', '1000', '8.456', '', '%', 'CGPA', '8.2 CG', '8.2 CGPA %', '8.2 marks', '85 CGPA', '11 GPA', '101 %'])(
+    'rejects %s', (s) => expect(isValidScore(s)).toBe(false));
+});
+
+describe('sanitizeScoreInput (CGPA / % field filter)', () => {
+  it('keeps digits, dot, %, spaces and the letters of CGPA / GPA as typed', () => {
+    expect(sanitizeScoreInput('8.2 CGPA')).toBe('8.2 CGPA');
+    expect(sanitizeScoreInput('9 gpa')).toBe('9 gpa');
+    expect(sanitizeScoreInput('85 %')).toBe('85 %');
+  });
+  it('blocks other letters and symbols', () => {
+    expect(sanitizeScoreInput('Gh')).toBe('G'); // G is a suffix letter; validation still rejects 'G'
+    expect(isValidScore(sanitizeScoreInput('Gh'))).toBe(false);
+    expect(sanitizeScoreInput('xyz')).toBe('');
+    expect(sanitizeScoreInput('8.2 marks!')).toBe('8.2 a');
+    expect(sanitizeScoreInput('85/100')).toBe('85100');
+  });
+  it('every value a user can type through the filter is judged by isValidScore, not rewritten', () => {
+    const typed = '8.2 CGPA';
+    expect(sanitizeScoreInput(typed)).toBe(typed);
+    expect(validateEducation(row({ score: typed }), NOW)).toEqual({});
+  });
 });
 
 describe('putJson save results', () => {

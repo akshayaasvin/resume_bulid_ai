@@ -21,11 +21,19 @@ export function isBlankEducation(e: EducationInput): boolean {
   return !e.institution.trim() && !e.degree.trim() && !e.field?.trim() && e.start_year == null && e.end_year == null && !e.score?.trim();
 }
 
-/** CGPA 0-10 or percentage 0-100, up to 2 decimals; a trailing % is allowed. */
+/**
+ * CGPA 0-10 or percentage 0-100, up to 2 decimals, with an optional suffix: "%", "CGPA" or "GPA"
+ * (any case, space optional). A CGPA/GPA suffix means the 0-10 scale. The text is stored as typed.
+ */
 export function isValidScore(raw: string): boolean {
-  const m = raw.trim().match(/^(\d{1,3}(?:\.\d{1,2})?)\s*%?$/);
-  return !!m && Number(m[1]) <= 100;
+  const m = raw.trim().match(/^(\d{1,3}(?:\.\d{1,2})?)\s*(%|cgpa|gpa)?$/i);
+  if (!m) return false;
+  const max = m[2] && m[2] !== '%' ? 10 : 100;
+  return Number(m[1]) <= max;
 }
+
+/** Input filter for the CGPA / % field: digits, '.', '%', spaces and the letters of "CGPA" / "GPA" only. */
+export const sanitizeScoreInput = (s: string) => s.replace(/[^0-9.%\scgpa]/gi, '');
 
 const validYear = (y: number, now: Date) => Number.isInteger(y) && y >= YEAR_MIN && y <= yearMax(now);
 

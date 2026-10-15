@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useT } from '@/i18n/client';
 import { putJson, useAutosave, type SaveResult, type SaveState } from '@/lib/useAutosave';
 import {
-  EDU_FIELDS, educationValid, isBlankEducation, validateEducation, yearMax, type EduError, type EduField,
+  EDU_FIELDS, educationValid, isBlankEducation, sanitizeScoreInput, validateEducation, yearMax, type EduError, type EduField,
 } from '@/lib/education-validation';
 import { canonicalSkillName, findCatalogSkill, normSkill, suggestSkills } from '@/lib/skill-alias';
 import { RunnerStatus } from '../RunnerStatus';
@@ -281,10 +281,10 @@ export function Wizard({ userId, initial, startStep, wizardStep, catalog, done }
                 <div>
                   <label className="label" htmlFor={fieldId(e.id, 'score')}>{t('wizard.score')}</label>
                   <input id={fieldId(e.id, 'score')} className={`input${invalidCls(eduError(i, 'score'))}`}
-                    inputMode="decimal" maxLength={7} value={e.score ?? ''}
+                    inputMode="decimal" maxLength={10} value={e.score ?? ''}
                     aria-invalid={!!eduError(i, 'score')} aria-describedby={`${fieldId(e.id, 'score')}-err`}
                     onBlur={() => touch(e.id, 'score')}
-                    onChange={(ev) => updEdu(education.map((x, j) => (j === i ? { ...x, score: ev.target.value.replace(/[^0-9.%]/g, '') } : x)))} />
+                    onChange={(ev) => updEdu(education.map((x, j) => (j === i ? { ...x, score: sanitizeScoreInput(ev.target.value) } : x)))} />
                   <FieldError id={`${fieldId(e.id, 'score')}-err`} code={eduError(i, 'score')} />
                 </div>
               </div>
