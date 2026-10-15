@@ -7,7 +7,7 @@ import { TEMPLATES, type TemplateId, type TemplateStyle } from './templates';
 
 const fontDir = path.join(process.cwd(), 'public', 'fonts');
 let registered = false;
-function registerFonts() {
+export function registerFonts() {
   if (registered) return;
   Font.register({
     family: 'NotoSans',

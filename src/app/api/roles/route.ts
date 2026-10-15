@@ -2,6 +2,10 @@ import { z } from 'zod';
 import { apiSession } from '@/lib/auth';
 import { syncFlowStep } from '@/lib/flow-server';
 import { roleById } from '@/lib/onboarding/roles';
+import { startRoleTailoring } from '@/lib/resume/versions';
+
+// AI tailoring of the resume runs in the background (waitUntil) within this limit.
+export const maxDuration = 60;
 
 const schema = z.object({ role_id: z.string().max(60) });
 
@@ -21,5 +25,10 @@ export async function POST(req: Request) {
     return Response.json({ error: 'save_failed' }, { status: 500 });
   }
   const step = await syncFlowStep(profile.id);
-  return Response.json({ ok: true, step });
+  // New resume version tailored to the role (AI in the background, rule-based right away without a key).
+  const tailoring = await startRoleTailoring(profile.id, role).catch((e) => {
+    console.error('starting role tailoring failed', e);
+    return 'failed' as const;
+  });
+  return Response.json({ ok: true, step, tailoring });
 }

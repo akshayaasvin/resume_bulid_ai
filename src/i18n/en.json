@@ -251,5 +251,21 @@
   "roles.chosen": "Your target role",
   "roles.continue": "Continue to my resume",
   "roles.none": "We need a little more to suggest roles. Take a skill test or add more skills.",
-  "roles.addMore": "Add projects, internships & awards (optional)"
+  "roles.addMore": "Add projects, internships & awards (optional)",
+  "resume.template": "Template",
+  "resume.template.modern": "Modern",
+  "resume.template.classic": "Classic",
+  "resume.template.minimal": "Minimal",
+  "resume.template.creative": "Creative",
+  "resume.template.tech": "Tech",
+  "resume.recommended": "Recommended",
+  "resume.fitTrimmed": "To fit one page, some older items and extra bullet points are left out of the PDF. Shorten your projects or experience to show everything.",
+  "resume.fitOverflow": "Your content does not fit on one page, so the end is cut off. Please shorten your projects, experience or summary.",
+  "resume.previewLoading": "Preparing preview…",
+  "resume.previewError": "Preview could not load. You can still download the PDF.",
+  "resume.previewLabel": "Resume preview",
+  "resume.forRole": "Tailored for: {role}",
+  "resume.changeRole": "Change role",
+  "resume.tailoring": "Tailoring your resume for {role}…",
+  "resume.textVersion": "Text version (for screen readers)"
 }

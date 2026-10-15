@@ -32,3 +32,6 @@ supabase/.branches/
 
 # local stand-in stack data
 .local-stack/
+
+# generated: pdf.js worker copied from node_modules (scripts/copy-pdf-worker.mjs)
+public/pdfjs/
