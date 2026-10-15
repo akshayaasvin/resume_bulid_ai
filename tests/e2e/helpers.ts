@@ -15,9 +15,10 @@ export async function onboard(page: Page, name = 'Test Student', skill = 'Excel'
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.getByRole('button', { name: /^A job/ }).click();
-  for (const lang of ['English', 'Tamil']) {
-    await page.getByRole('group', { name: lang }).getByRole('button', { name: 'Intermediate' }).click();
-  }
+  await page.getByRole('radiogroup', { name: 'English' }).getByRole('radio', { name: 'Intermediate' }).click();
+  await page.getByRole('button', { name: '+ Add language' }).click();
+  await page.getByRole('button', { name: 'Tamil', exact: true }).click();
+  await page.getByRole('radiogroup', { name: 'Tamil' }).getByRole('radio', { name: 'Fluent' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Teamwork' }).click();
   await page.getByRole('button', { name: 'Next' }).click();

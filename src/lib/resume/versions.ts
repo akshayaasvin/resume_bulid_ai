@@ -13,7 +13,7 @@ export async function loadSnapshotInput(profileId: string): Promise<SnapshotInpu
   const [{ data: profile }, { data: extras }, { data: education }, { data: experience }, { data: claimed }, { data: scores }, { data: awards }] = await Promise.all([
     db.from('profiles').select('full_name, name_tamil, phone_whatsapp, email, department, year, summary, colleges(name)').eq('id', profileId).single(),
     // onboarding columns (migration 0009); missing columns just mean no extras
-    db.from('profiles').select('soft_skills, english_level, tamil_level').eq('id', profileId).maybeSingle(),
+    db.from('profiles').select('*').eq('id', profileId).maybeSingle(),
     db.from('education').select('institution, degree, field, start_year, end_year, score, sort').eq('profile_id', profileId),
     db.from('experience').select('type, title, organization, start_date, end_date, bullets, description, sort').eq('profile_id', profileId),
     db.from('claimed_skills').select('skill_id, name').eq('profile_id', profileId),
@@ -23,7 +23,13 @@ export async function loadSnapshotInput(profileId: string): Promise<SnapshotInpu
   if (!profile) return null;
   const college = (profile as unknown as { colleges: { name: string } | null }).colleges?.name ?? null;
   return {
-    profile: { ...(profile as SnapshotInput['profile']), ...((extras ?? {}) as Partial<SnapshotInput['profile']>) },
+    profile: {
+      ...(profile as SnapshotInput['profile']),
+      ...(() => {
+        const x = (extras ?? {}) as Partial<SnapshotInput['profile']>;
+        return { soft_skills: x.soft_skills, english_level: x.english_level, tamil_level: x.tamil_level, languages: x.languages };
+      })(),
+    },
     college,
     education: (education ?? []) as SnapshotInput['education'],
     experience: (experience ?? []) as SnapshotInput['experience'],

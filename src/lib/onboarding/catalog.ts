@@ -6,6 +6,14 @@ export type Goal = (typeof GOALS)[number];
 export const LEVELS = ['basic', 'intermediate', 'fluent'] as const;
 export type Level = (typeof LEVELS)[number];
 
+/** Languages offered by "+ Add language" (English is always there). "Other" lets the candidate type one. */
+export const EXTRA_LANGUAGES = [
+  'Tamil', 'Hindi', 'Malayalam', 'Telugu', 'Kannada', 'Urdu', 'Marathi', 'Bengali', 'French', 'German', 'Japanese', 'Arabic',
+] as const;
+
+export const languageEntrySchema = z.object({ name: z.string().trim().min(2).max(40), level: z.enum(LEVELS) });
+export type LanguageEntry = z.infer<typeof languageEntrySchema>;
+
 export const SOFT_SKILLS = [
   'Teamwork', 'Leadership', 'Problem solving', 'Time management', 'Presentation', 'Communication',
   'Adaptability', 'Critical thinking', 'Creativity', 'Customer handling',
@@ -24,7 +32,11 @@ export const TECH_SKILL_GROUPS: { domain: 'software' | 'data' | 'design' | 'offi
 export const onboardingAnswersSchema = z.object({
   goal: z.enum(GOALS),
   english_level: z.enum(LEVELS),
-  tamil_level: z.enum(LEVELS),
+  /** Other spoken languages in the order added (English is separate and always first). */
+  languages: z.array(languageEntrySchema).max(12)
+    .refine((l) => new Set(l.map((x) => x.name.toLowerCase())).size === l.length && l.every((x) => x.name.toLowerCase() !== 'english'),
+      'duplicate language')
+    .default([]),
   soft_skills: z.array(z.string().trim().min(2).max(40)).max(12),
   tech_skills: z.array(z.string().trim().min(2).max(60)).min(1).max(20),
 });

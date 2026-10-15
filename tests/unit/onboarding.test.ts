@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { isJunkName, validateEducation } from '@/lib/education-validation';
 import { onboardingAnswersSchema } from '@/lib/onboarding/catalog';
 import { JOB_ROLES, matchRoles } from '@/lib/onboarding/roles';
+import { resumeLanguages } from '@/lib/resume/snapshot';
 
 const NOW = new Date('2026-10-15T00:00:00Z');
 const edu = (institution: string, o: Record<string, unknown> = {}) =>
@@ -38,12 +39,34 @@ describe('education: junk school / college names are rejected', () => {
 });
 
 describe('onboarding answers', () => {
-  const ok = { goal: 'job', english_level: 'intermediate', tamil_level: 'fluent', soft_skills: ['Teamwork'], tech_skills: ['Python'] };
+  const ok = {
+    goal: 'job', english_level: 'intermediate', languages: [{ name: 'Tamil', level: 'fluent' }],
+    soft_skills: ['Teamwork'], tech_skills: ['Python'],
+  };
   it('accepts a complete set', () => expect(onboardingAnswersSchema.safeParse(ok).success).toBe(true));
-  it('needs a goal, both language levels and at least one technical skill', () => {
+  it('needs a goal, an English level and at least one technical skill', () => {
     expect(onboardingAnswersSchema.safeParse({ ...ok, goal: 'astronaut' }).success).toBe(false);
     expect(onboardingAnswersSchema.safeParse({ ...ok, english_level: undefined }).success).toBe(false);
     expect(onboardingAnswersSchema.safeParse({ ...ok, tech_skills: [] }).success).toBe(false);
+  });
+  it('other languages are optional, each needs a level, no duplicates, no second English', () => {
+    expect(onboardingAnswersSchema.parse({ ...ok, languages: undefined }).languages).toEqual([]);
+    expect(onboardingAnswersSchema.safeParse({ ...ok, languages: [{ name: 'Hindi', level: null }] }).success).toBe(false);
+    expect(onboardingAnswersSchema.safeParse({ ...ok, languages: [{ name: 'Tamil', level: 'basic' }, { name: 'tamil', level: 'fluent' }] }).success).toBe(false);
+    expect(onboardingAnswersSchema.safeParse({ ...ok, languages: [{ name: 'English', level: 'fluent' }] }).success).toBe(false);
+    expect(onboardingAnswersSchema.safeParse({ ...ok, languages: [{ name: 'Sourashtra', level: 'basic' }] }).success).toBe(true); // "Other"
+  });
+});
+
+describe('resume languages', () => {
+  const p = { full_name: 'P', name_tamil: null, phone_whatsapp: null, email: null, department: null, year: null, summary: null };
+  it('lists English first, then added languages in the order added', () => {
+    expect(resumeLanguages({ ...p, english_level: 'fluent', languages: [{ name: 'Hindi', level: 'basic' }, { name: 'Tamil', level: 'fluent' }] }))
+      .toEqual([{ name: 'English', level: 'Fluent' }, { name: 'Hindi', level: 'Basic' }, { name: 'Tamil', level: 'Fluent' }]);
+  });
+  it('keeps the Tamil answer of profiles created before the language list', () => {
+    expect(resumeLanguages({ ...p, english_level: 'intermediate', tamil_level: 'fluent', languages: [] }))
+      .toEqual([{ name: 'English', level: 'Intermediate' }, { name: 'Tamil', level: 'Fluent' }]);
   });
 });
 

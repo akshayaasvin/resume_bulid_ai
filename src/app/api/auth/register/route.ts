@@ -127,7 +127,8 @@ export async function POST(req: Request) {
     wizard_step: ob ? 4 : 1,
     current_step: ob ? 'tests' : 'wizard',
     ...(ob && {
-      goal: ob.goal, english_level: ob.english_level, tamil_level: ob.tamil_level, soft_skills: ob.soft_skills,
+      goal: ob.goal, english_level: ob.english_level, languages: ob.languages, soft_skills: ob.soft_skills,
+      tamil_level: ob.languages.find((l) => l.name.toLowerCase() === 'tamil')?.level ?? null,
     }),
   });
   if (profileErr) {

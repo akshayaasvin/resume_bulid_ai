@@ -30,6 +30,7 @@ export interface SnapshotInput {
     full_name: string; name_tamil: string | null; phone_whatsapp: string | null; email: string | null;
     department: string | null; year: number | null; summary: string | null;
     soft_skills?: string[] | null; english_level?: string | null; tamil_level?: string | null;
+    languages?: { name: string; level: string }[] | null;
   };
   college: string | null;
   education: { institution: string; degree: string; field: string | null; start_year: number | null; end_year: number | null; score: string | null; sort: number }[];
@@ -53,6 +54,18 @@ export function headerLines(s: Pick<ResumeSnapshot, 'name' | 'nameTamil' | 'head
 }
 
 const LANG_LEVEL: Record<string, string> = { basic: 'Basic', intermediate: 'Intermediate', fluent: 'Fluent' };
+
+/** English first, then the candidate's other languages in the order they added them. */
+export function resumeLanguages(p: SnapshotInput['profile']): { name: string; level: string }[] {
+  const lv = (l: string) => LANG_LEVEL[l] ?? l;
+  const others = p.languages?.length
+    ? p.languages.filter((l) => l.name.toLowerCase() !== 'english')
+    : p.tamil_level ? [{ name: 'Tamil', level: p.tamil_level }] : []; // profiles from before the language list
+  return [
+    ...(p.english_level ? [{ name: 'English', level: lv(p.english_level) }] : []),
+    ...others.map((l) => ({ name: l.name, level: lv(l.level) })),
+  ];
+}
 
 const BADGE_ORDER: Record<Badge, number> = { campus_verified: 0, verified: 1, self: 2 };
 
@@ -106,10 +119,7 @@ export function buildSnapshot(input: SnapshotInput, cfg: ScoringConfig, now = ne
     otherSkills,
     awards: [...(input.awards ?? [])].sort((a, b) => a.sort - b.sort).map(({ name, issuer, year }) => ({ name, issuer, year })),
     softSkills: input.profile.soft_skills ?? [],
-    languages: [
-      ...(input.profile.english_level ? [{ name: 'English', level: LANG_LEVEL[input.profile.english_level] ?? input.profile.english_level }] : []),
-      ...(input.profile.tamil_level ? [{ name: 'Tamil', level: LANG_LEVEL[input.profile.tamil_level] ?? input.profile.tamil_level }] : []),
-    ],
+    languages: resumeLanguages(input.profile),
     generatedAt: now.toISOString(),
   };
 }

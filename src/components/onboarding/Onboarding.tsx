@@ -9,6 +9,7 @@ import {
 import { sanitizeScoreInput } from '@/lib/education-validation';
 import { GOALS, LEVELS, SOFT_SKILLS, TECH_SKILL_GROUPS, type Goal, type Level } from '@/lib/onboarding/catalog';
 import { matchRoles } from '@/lib/onboarding/roles';
+import { LanguagesStep, type LangRow } from './LanguagesStep';
 import { canonicalSkillName, normSkill } from '@/lib/skill-alias';
 
 /**
@@ -21,7 +22,8 @@ interface State {
   step: number;
   goal: Goal | null;
   english_level: Level | null;
-  tamil_level: Level | null;
+  /** Other languages in the order added (English is separate, always first). */
+  languages: LangRow[];
   soft_skills: string[];
   tech_skills: string[];
   full_name: string; phone: string; email: string;
@@ -36,7 +38,7 @@ const STORAGE_KEY = 'onboarding:v1';
 const TOTAL = 6;
 const newEdu = (): Edu => ({ id: crypto.randomUUID(), institution: '', degree: '', field: '', start_year: null, end_year: null, score: '' });
 const initialState = (): State => ({
-  step: 1, goal: null, english_level: null, tamil_level: null, soft_skills: [], tech_skills: [],
+  step: 1, goal: null, english_level: null, languages: [], soft_skills: [], tech_skills: [],
   full_name: '', phone: '', email: '', college_id: '', college_other: false, college_name: '', department: '', year: '',
   education: [newEdu()], agreed: false,
 });
@@ -68,8 +70,11 @@ export function Onboarding({ colleges, batch }: {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const saved = { ...initialState(), ...(JSON.parse(raw) as Partial<State>) };
+        const parsed = JSON.parse(raw) as Partial<State> & { tamil_level?: Level | null };
+        const saved = { ...initialState(), ...parsed };
         if (!saved.education.length) saved.education = [newEdu()];
+        // Progress saved before languages became a list: keep the Tamil answer as an added language.
+        if (!parsed.languages && parsed.tamil_level) saved.languages = [{ name: 'Tamil', level: parsed.tamil_level }];
         setS(saved);
         if (saved.step > 1) setRestored(true);
       }
@@ -110,7 +115,8 @@ export function Onboarding({ colleges, batch }: {
   function next() {
     setError(null);
     if (s.step === 1 && !s.goal) return setError(t('ob.pickOne'));
-    if (s.step === 2 && (!s.english_level || !s.tamil_level)) return setError(t('ob.pickOne'));
+    if (s.step === 2 && !s.english_level) return setError(t('ob.lang.needEnglish'));
+    if (s.step === 2 && s.languages.some((l) => !l.level)) return setError(t('ob.lang.needLevel'));
     if (s.step === 4 && s.tech_skills.length === 0) return setError(t('ob.pickTech'));
     if (s.step < TOTAL) go(s.step + 1);
   }
@@ -144,7 +150,8 @@ export function Onboarding({ colleges, batch }: {
           agreed_to_policy: s.agreed,
           language: lang,
           onboarding: {
-            goal: s.goal, english_level: s.english_level, tamil_level: s.tamil_level,
+            goal: s.goal, english_level: s.english_level,
+            languages: s.languages.filter((l) => l.level),
             soft_skills: s.soft_skills, tech_skills: s.tech_skills,
           },
           education: filledEdu.map((e) => ({
@@ -223,23 +230,12 @@ export function Onboarding({ colleges, batch }: {
       )}
 
       {s.step === 2 && (
-        <section className="space-y-5">
-          <h1 className="text-2xl font-bold">{t('ob.comm.q')}</h1>
-          {(['english_level', 'tamil_level'] as const).map((field) => (
-            <fieldset key={field}>
-              <legend className="mb-2 font-semibold">{t(field === 'english_level' ? 'ob.comm.english' : 'ob.comm.tamil')}</legend>
-              <div className="grid grid-cols-3 gap-2">
-                {LEVELS.map((lv) => (
-                  <button key={lv} type="button" aria-pressed={s[field] === lv}
-                    className={`rounded-xl border px-2 py-3 text-sm ${s[field] === lv ? 'border-brand-600 bg-brand-600 font-semibold text-white' : 'border-slate-300 bg-white'}`}
-                    onClick={() => update({ [field]: lv } as Partial<State>)}>
-                    {t(`ob.level.${lv}`)}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-          ))}
-        </section>
+        <LanguagesStep
+          english={s.english_level}
+          languages={s.languages}
+          onEnglish={(lv) => update({ english_level: lv })}
+          onLanguages={(rows) => update({ languages: rows })}
+        />
       )}
 
       {s.step === 3 && (
@@ -493,7 +489,8 @@ export function Onboarding({ colleges, batch }: {
           )}
           {s.step < TOTAL ? (
             s.step !== 1 && (
-              <button type="button" className="btn-primary flex-[2]" onClick={next} disabled={s.step === 5 && roles.length === 0}>
+              <button type="button" className="btn-primary flex-[2]" onClick={next}
+                disabled={(s.step === 5 && roles.length === 0) || (s.step === 2 && !s.english_level)}>
                 {s.step === 5 ? t('ob.value.next') : t('common.next')}
               </button>
             )
