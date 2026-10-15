@@ -34,3 +34,13 @@ export function skillScoreParams(input: {
     : 'Keep practising - you can retake this test any time';
   return [firstName, input.skill, result, input.resumeUrl, input.ctaUrl];
 }
+
+/**
+ * {{3}} for a combined (skill group) test: only skills at/above the threshold are listed with their
+ * %; below-threshold skills are never mentioned. "Keep practising" when none passed.
+ */
+export function clusterResultText(results: Record<string, number>, threshold: number): string {
+  const passed = Object.entries(results).filter(([, pct]) => pct >= threshold);
+  if (!passed.length) return 'Keep practising - you can retake this test any time';
+  return `Verified - ${passed.map(([skill, pct]) => `${skill} ${Math.round(pct)}%`).join(', ')}`;
+}

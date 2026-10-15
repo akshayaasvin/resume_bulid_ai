@@ -9,6 +9,7 @@ import { getT } from '@/i18n/server';
 import { requireSession } from '@/lib/auth';
 import type { ResumeSnapshot } from '@/lib/resume/snapshot';
 import { isTemplateId, recommendTemplate } from '@/lib/resume/templates';
+import { SelfDeclaredSkills } from '@/components/resume/SelfDeclaredSkills';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,6 +64,7 @@ export default async function ResumePage({ searchParams }: { searchParams: { v?:
             </div>
             <ShowPctToggle initial={profile.show_score_pct} />
             <WhatsAppToggle initial={profile.whatsapp_opt_in} />
+            <SelfDeclaredSkills skills={selected.snapshot.otherSkills} t={t} />
             <ResumeStudio
               key={selected.version}
               version={selected.version}

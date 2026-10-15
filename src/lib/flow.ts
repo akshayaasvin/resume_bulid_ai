@@ -16,9 +16,10 @@ export const STEP_HOME: Record<FlowStep, string> = {
  * The candidate's declared skills, by test availability:
  * - testable: a test exists (question bank or a cached AI-generated test);
  * - waiting: no test yet, but one can still be generated on demand;
- * - unavailable: no test and generation recently failed (or the name isn't a testable skill).
+ * - unavailable: no test and generation recently failed (or the name isn't a testable skill);
+ * - selfDeclared: skills that are never tested by MCQ (Canva, MS Word, ...): shown as Self-declared.
  */
-export interface SkillTestAvailability { testable: number; waiting: number; unavailable: number }
+export interface SkillTestAvailability { testable: number; waiting: number; unavailable: number; selfDeclared?: number }
 
 /**
  * Minimum completed tests before job matches unlock: 3, or every testable declared skill if fewer.
@@ -29,6 +30,7 @@ export function requiredTests(a: SkillTestAvailability): number {
   if (a.testable > 0) return Math.min(MIN_TESTS, a.testable);
   if (a.waiting > 0) return 1; // generate + take one
   if (a.unavailable > 0) return 0; // tests for their skills are being prepared: don't block
+  if ((a.selfDeclared ?? 0) > 0) return 0; // only self-declared skills: nothing to verify
   return 1; // no skills declared: take any test from the catalogue
 }
 

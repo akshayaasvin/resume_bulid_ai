@@ -3,6 +3,7 @@ import { adminClient } from './supabase/admin';
 import { computeStep, isFlowStep, laterStep, type FlowStep } from './flow';
 import { canonicalSkillName, findCatalogSkill, normSkill } from './skill-alias';
 import { skillTestStatuses } from './ai/skill-tests';
+import { clusterOf } from './tests/clusters';
 
 /** Counts the candidate's tested skills and how many declared skills have / can get / can't get a test. */
 export async function testProgress(profileId: string) {
@@ -14,7 +15,9 @@ export async function testProgress(profileId: string) {
   ]);
   const cat = (catalog ?? []) as { id: string; name: string }[];
   const ids = new Set(cat.map((c) => c.id));
-  const rows = (claimed ?? []) as { skill_id: string | null; name: string }[];
+  const all = (claimed ?? []) as { skill_id: string | null; name: string }[];
+  // Only skills in a test group are verified by tests; the rest stay self-declared.
+  const rows = all.filter((c) => clusterOf(c.name) !== null);
   const untested = rows.filter((c) => !((c.skill_id && ids.has(c.skill_id)) || findCatalogSkill(c.name, cat)));
   // Untested skills: 'pending' ones will get a bank in the background; failed / not-a-skill ones can't right now.
   const statuses = await skillTestStatuses(untested.map((c) => c.name));
@@ -27,6 +30,7 @@ export async function testProgress(profileId: string) {
     testable: rows.length - untested.length,
     waiting: untested.length - unavailable,
     unavailable,
+    selfDeclared: all.length - rows.length,
   };
 }
 

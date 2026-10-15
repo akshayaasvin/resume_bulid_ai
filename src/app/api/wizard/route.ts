@@ -5,6 +5,7 @@ import { track } from '@/lib/funnel';
 import { syncFlowStep } from '@/lib/flow-server';
 import { canonicalSkillName, findCatalogSkill, normSkill } from '@/lib/skill-alias';
 import { prepareInBackground } from '@/lib/ai/skill-tests';
+import { clusterOf } from '@/lib/tests/clusters';
 
 // Saving skills may start background question-bank generation (waitUntil), which shares this limit.
 export const maxDuration = 60;
@@ -123,7 +124,7 @@ export async function PUT(req: Request) {
         if (error) throw error;
       }
       // Skills with no test yet: start building their question bank now, so it's ready by the test step.
-      prepareInBackground(skills.filter((s) => !s.skill_id || !(catalog ?? []).some((c) => c.id === s.skill_id)).map((s) => s.name), uid);
+      prepareInBackground(skills.filter((s) => clusterOf(s.name) && (!s.skill_id || !(catalog ?? []).some((c) => c.id === s.skill_id))).map((s) => s.name), uid);
       if (body.summary !== undefined) {
         const { error } = await supabase.from('profiles').update({ summary: body.summary || null }).eq('id', uid);
         if (error) throw error;

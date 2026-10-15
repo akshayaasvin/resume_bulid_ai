@@ -8,6 +8,7 @@ import { hasErrors, isJunkName, validateEducation } from '@/lib/education-valida
 import { onboardingAnswersSchema } from '@/lib/onboarding/catalog';
 import { canonicalSkillName, findCatalogSkill, normSkill } from '@/lib/skill-alias';
 import { prepareInBackground } from '@/lib/ai/skill-tests';
+import { clusterOf } from '@/lib/tests/clusters';
 import { createResumeVersion } from '@/lib/resume/versions';
 
 // May start background question-bank generation for skills without a test (waitUntil).
@@ -155,7 +156,7 @@ export async function POST(req: Request) {
     });
     if (claimed.length) await admin.from('claimed_skills').insert(claimed);
     // Skills with no test yet: build their question banks in the background right away.
-    prepareInBackground(claimed.filter((c) => !c.skill_id).map((c) => c.name), uid);
+    prepareInBackground(claimed.filter((c) => !c.skill_id && clusterOf(c.name)).map((c) => c.name), uid);
     await createResumeVersion(uid, 'initial').catch((e) => console.error('initial resume failed', e));
     await track(uid, 'profile_completed', { via: 'onboarding', goal: ob.goal });
   }

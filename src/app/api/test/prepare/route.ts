@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { apiSession } from '@/lib/auth';
 import { prepareInBackground, skillTestStatuses } from '@/lib/ai/skill-tests';
 import { syncFlowStep } from '@/lib/flow-server';
+import { clusterOf } from '@/lib/tests/clusters';
 import { canonicalSkillName, normSkill } from '@/lib/skill-alias';
 
 // Background generation (waitUntil) runs inside this function's time limit.
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
   if (!names.length) return Response.json({ statuses: {} });
 
   const statuses = await skillTestStatuses(names);
-  prepareInBackground(names.filter((n) => statuses.get(normSkill(canonicalSkillName(n)))?.state === 'pending'), profile.id);
+  prepareInBackground(names.filter((n) => clusterOf(n) && statuses.get(normSkill(canonicalSkillName(n)))?.state === 'pending'), profile.id);
 
   // A skill that just became ready (or failed) can change what's needed to unlock job matches.
   await syncFlowStep(profile.id).catch((e) => console.error('flow sync failed', e));
