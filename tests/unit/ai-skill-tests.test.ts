@@ -1,90 +1,119 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { checkGeneratedTest, mixFor, skillSlug, type GeneratedTest } from '@/lib/ai/skill-test-schema';
+import {
+  BANK_TARGET, FIRST_BATCH, TOPUP_BATCH, checkBatch, levelSplit, skillSlug, type GeneratedBatch,
+} from '@/lib/ai/skill-test-schema';
 
 // ---------------------------------------------------------------------------
-// Output validation
+// Batch validation
 // ---------------------------------------------------------------------------
-const q = (i: number, o: Partial<GeneratedTest['questions'][number]> = {}) => ({
-  question: `In AutoCAD, which command would you use for task number ${i}?`,
-  options: [`Option A${i}`, `Option B${i}`, `Option C${i}`, `Option D${i}`],
-  correct_index: i % 4,
-  explanation: 'Because it is the right tool for the job.',
-  level: i < 5 ? (i % 2 ? 'Beginner' : 'beginner') : 'intermediate', // model casing varies
-  ...o,
-});
-const valid = (): GeneratedTest => ({ testable: true, questions: Array.from({ length: 10 }, (_, i) => q(i)) });
+let seq = 0;
+const q = (o: Partial<GeneratedBatch['questions'][number]> = {}) => {
+  const i = seq++;
+  return {
+    type: i % 3 === 0 ? 'scenario' : 'mcq',
+    level: ['beginner', 'Intermediate', 'advanced'][i % 3],
+    question: `In AutoCAD, which command would you use for task number ${i}?`,
+    options: [`Option A${i}`, `Option B${i}`, `Option C${i}`, `Option D${i}`],
+    correct_index: i % 4,
+    explanation: 'Because it is the right tool for the job.',
+    ...o,
+  };
+};
+const batch = (n: number): GeneratedBatch => ({ testable: true, questions: Array.from({ length: n }, () => q()) });
 
-describe('checkGeneratedTest', () => {
-  it('accepts exactly 10 questions with 4 unique options and a valid answer', () => {
-    const r = checkGeneratedTest(valid());
+describe('checkBatch', () => {
+  it('accepts the requested count and maps type + level', () => {
+    const r = checkBatch(batch(12), 12);
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.questions).toHaveLength(10);
-      expect(mixFor(r.questions)).toEqual({ easy: 5, medium: 5, hard: 0 });
+      expect(r.questions.map((x) => x.difficulty).sort()).toEqual([1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3]);
+      expect(r.questions.some((x) => x.type === 'scenario')).toBe(true);
     }
   });
-  it('rejects the wrong number of questions', () => {
-    const t = valid(); t.questions.pop();
-    expect(checkGeneratedTest(t)).toMatchObject({ ok: false });
+  it('rejects a wrong count, duplicate/missing options, a bad answer index', () => {
+    expect(checkBatch(batch(11), 12)).toMatchObject({ ok: false });
+    const dup = batch(3); dup.questions[1] = q({ options: ['Yes', 'yes ', 'No', 'Maybe'] });
+    expect(checkBatch(dup, 3)).toMatchObject({ ok: false, reason: expect.stringContaining('unique') });
+    const three = batch(3); three.questions[0] = q({ options: ['a', 'b', 'c'] });
+    expect(checkBatch(three, 3)).toMatchObject({ ok: false });
+    const idx = batch(3); idx.questions[2] = q({ correct_index: 4 });
+    expect(checkBatch(idx, 3)).toMatchObject({ ok: false, reason: expect.stringContaining('answer index') });
   });
-  it('rejects duplicate options (case-insensitive), wrong option count, bad answer index', () => {
-    const dup = valid(); dup.questions[3] = q(3, { options: ['Yes', 'yes ', 'No', 'Maybe'] });
-    expect(checkGeneratedTest(dup)).toMatchObject({ ok: false, reason: expect.stringContaining('unique') });
-    const three = valid(); three.questions[0] = q(0, { options: ['a1', 'b1', 'c1'] });
-    expect(checkGeneratedTest(three)).toMatchObject({ ok: false });
-    const idx = valid(); idx.questions[9] = q(9, { correct_index: 4 });
-    expect(checkGeneratedTest(idx)).toMatchObject({ ok: false, reason: expect.stringContaining('answer index') });
-  });
-  it('rejects duplicate questions and non-skills', () => {
-    const dup = valid(); dup.questions[1] = { ...dup.questions[0] };
-    expect(checkGeneratedTest(dup)).toMatchObject({ ok: false });
-    expect(checkGeneratedTest({ testable: false, questions: [] })).toEqual({ ok: false, reason: 'not_testable' });
+  it('rejects questions already in the bank (any spacing/case) and non-skills', () => {
+    const b = batch(2);
+    expect(checkBatch(b, 2, [`  ${b.questions[1].question.toUpperCase()} `])).toMatchObject({ ok: false, reason: expect.stringContaining('duplicate') });
+    expect(checkBatch({ testable: false, questions: [] }, 12)).toEqual({ ok: false, reason: 'not_testable' });
   });
 });
 
-describe('skillSlug', () => {
+describe('levelSplit / skillSlug', () => {
+  it('keeps every batch close to the 10/12/8 bank shape', () => {
+    expect(levelSplit(12)).toEqual({ beginner: 4, intermediate: 5, advanced: 3 });
+    expect(levelSplit(9)).toEqual({ beginner: 3, intermediate: 4, advanced: 2 });
+    expect(levelSplit(30)).toEqual({ beginner: 10, intermediate: 12, advanced: 8 });
+  });
   it.each([['HTML/CSS', 'html-css'], ['MS Word', 'ms-word'], ['AutoCAD', 'autocad'], ['C++', 'cplusplus'], ['C#', 'csharp'], ['  ', 'skill']])(
     '%s -> %s', (name, slug) => expect(skillSlug(name)).toBe(slug));
 });
 
 // ---------------------------------------------------------------------------
-// ensureSkillTest: generate once, then serve the cached test to everyone
+// Background bank generation with an in-memory database
 // ---------------------------------------------------------------------------
-const { parse, db } = vi.hoisted(() => {
+const { parse, db, background } = vi.hoisted(() => {
   const state = {
     skills: [] as { id: string; slug: string; name: string }[],
-    gen: null as null | Record<string, unknown>,
+    questions: [] as { skill_id: string; body: string }[],
+    gen: new Map<string, Record<string, unknown>>(),
     usage: 0,
+    claimHeld: false,
   };
-  // Minimal stand-in for the Supabase admin client: just enough for skill-tests.ts and getConfig().
   const builder = (table: string) => {
+    const filters: Record<string, unknown> = {};
     const b: Record<string, unknown> = {};
-    const result = () => {
-      if (table === 'skills') return { data: state.skills };
-      if (table === 'ai_usage') return { count: state.usage, data: null };
-      return { data: null };
+    b.select = () => b;
+    b.eq = (col: string, v: unknown) => { filters[col] = v; return b; };
+    for (const m of ['gte', 'in', 'order']) b[m] = () => b;
+    const rows = () => {
+      if (table === 'skills') return state.skills.filter((s) => !filters.slug || s.slug === filters.slug);
+      if (table === 'questions') return state.questions.filter((x) => x.skill_id === filters.skill_id);
+      if (table === 'skill_test_generation') return Array.from(state.gen.values());
+      return [];
     };
-    for (const m of ['select', 'eq', 'gte', 'in', 'order']) b[m] = () => b;
-    b.maybeSingle = async () => ({ data: table === 'skill_test_generation' ? state.gen : null });
-    b.single = async () => ({ data: table === 'skills' ? state.skills.at(-1) : null });
+    b.maybeSingle = async () => ({ data: rows()[0] ?? null });
+    b.single = async () => ({ data: rows()[0] ?? null });
     b.insert = async () => { if (table === 'ai_usage') state.usage++; return { error: null }; };
-    b.upsert = async (row: Record<string, unknown>) => { if (table === 'skill_test_generation') state.gen = row; return { error: null }; };
-    b.then = (res: (v: unknown) => unknown) => res(result());
+    b.upsert = async (row: Record<string, unknown>) => { state.gen.set(row.name_key as string, row); return { error: null }; };
+    b.update = (patch: Record<string, unknown>) => ({
+      eq: async (_c: string, key: string) => { state.gen.set(key, { ...(state.gen.get(key) ?? { name_key: key }), ...patch }); return { error: null }; },
+    });
+    b.then = (res: (v: unknown) => unknown) => res(table === 'ai_usage' ? { count: state.usage, data: null } : { data: rows() });
     return b;
   };
+  const add = (skillId: string, qs: { body: string }[]) => qs.forEach((x) => state.questions.push({ skill_id: skillId, body: x.body }));
   const client = {
     state,
     from: builder,
-    rpc: async (_fn: string, args: { p_name: string; p_slug: string }) => {
-      const id = `skill-${state.skills.length + 1}`;
-      state.skills.push({ id, slug: args.p_slug, name: args.p_name });
-      return { data: id, error: null };
+    rpc: async (fn: string, a: Record<string, unknown>) => {
+      if (fn === 'claim_skill_generation') {
+        if (state.claimHeld) return { data: false, error: null };
+        state.gen.set(a.p_key as string, { name_key: a.p_key, status: 'pending', updated_at: new Date().toISOString() });
+        return { data: true, error: null };
+      }
+      if (fn === 'create_ai_skill_test') {
+        const id = `skill-${state.skills.length + 1}`;
+        state.skills.push({ id, slug: a.p_slug as string, name: a.p_name as string });
+        add(id, a.p_questions as { body: string }[]);
+        return { data: id, error: null };
+      }
+      if (fn === 'add_ai_questions') { add(a.p_skill_id as string, a.p_questions as { body: string }[]); return { data: 1, error: null }; }
+      return { data: null, error: null };
     },
   };
-  return { parse: vi.fn(), db: client };
+  return { parse: vi.fn(), db: client, background: [] as Promise<unknown>[] };
 });
 
 vi.mock('@/lib/supabase/admin', () => ({ adminClient: () => db }));
+vi.mock('@vercel/functions', () => ({ waitUntil: (p: Promise<unknown>) => { background.push(p); } }));
 vi.mock('@anthropic-ai/sdk', () => {
   class APIError extends Error { status?: number }
   class Anthropic {
@@ -94,60 +123,75 @@ vi.mock('@anthropic-ai/sdk', () => {
   return { default: Anthropic };
 });
 
-const reply = (parsed: GeneratedTest | null) => ({ stop_reason: 'end_turn', parsed_output: parsed, usage: { input_tokens: 100, output_tokens: 900 } });
+/** The mocked model returns exactly the number of questions the prompt asks for. */
+function modelReplies() {
+  parse.mockImplementation(async (req: { messages: { content: string }[] }) => {
+    const n = Number(/exactly (\d+) multiple-choice/.exec(req.messages[0].content)![1]);
+    return { stop_reason: 'end_turn', parsed_output: batch(n), usage: { input_tokens: 100, output_tokens: 900 } };
+  });
+}
 
-describe('ensureSkillTest', () => {
+describe('prepareSkillBank / prepareInBackground', () => {
   beforeEach(() => {
-    db.state.skills = [];
-    db.state.gen = null;
-    db.state.usage = 0;
+    db.state.skills = []; db.state.questions = []; db.state.gen.clear(); db.state.usage = 0; db.state.claimHeld = false;
+    background.length = 0;
     parse.mockReset();
     process.env.ANTHROPIC_API_KEY = 'test-key';
   });
 
-  it('generates once, then the second user gets the cached test with no API call', async () => {
-    const { ensureSkillTest } = await import('@/lib/ai/skill-tests');
-    parse.mockResolvedValueOnce(reply(valid()));
+  it('builds a new skill in the background: first batch of 12, then top-ups to 30', async () => {
+    const { prepareInBackground, skillTestStatuses } = await import('@/lib/ai/skill-tests');
+    modelReplies();
+    prepareInBackground(['AutoCAD'], 'user-1'); // returns immediately
+    expect((await skillTestStatuses(['AutoCAD'])).get('autocad')).toEqual({ state: 'pending' });
+    await Promise.all(background);
 
-    const first = await ensureSkillTest('AutoCAD', 'user-1');
-    expect(first).toEqual({ ok: true, slug: 'autocad', cached: false });
-    expect(parse).toHaveBeenCalledTimes(1);
-
-    const second = await ensureSkillTest('  autocad ', 'user-2'); // normalised name
-    expect(second).toEqual({ ok: true, slug: 'autocad', cached: true });
-    expect(parse).toHaveBeenCalledTimes(1); // no new API call
+    expect(db.state.skills).toEqual([{ id: 'skill-1', slug: 'autocad', name: 'AutoCAD' }]);
+    expect(db.state.questions).toHaveLength(BANK_TARGET);
+    const sizes = parse.mock.calls.map((c) => Number(/exactly (\d+)/.exec(c[0].messages[0].content)![1]));
+    expect(sizes[0]).toBe(FIRST_BATCH);
+    expect(sizes.slice(1).every((n) => n <= TOPUP_BATCH)).toBe(true);
+    expect((await skillTestStatuses(['  autocad '])).get('autocad')).toEqual({ state: 'ready', slug: 'autocad' });
   });
 
-  it('retries once on invalid output', async () => {
-    const { ensureSkillTest } = await import('@/lib/ai/skill-tests');
-    const bad = valid(); bad.questions.pop();
-    parse.mockResolvedValueOnce(reply(bad)).mockResolvedValueOnce(reply(valid()));
-    expect(await ensureSkillTest('MS Word', 'user-1')).toMatchObject({ ok: true, slug: 'ms-word' });
-    expect(parse).toHaveBeenCalledTimes(2);
+  it('a full bank makes no API call (second user, or a test start)', async () => {
+    const { prepareSkillBank } = await import('@/lib/ai/skill-tests');
+    modelReplies();
+    await prepareSkillBank('AutoCAD', 'user-1');
+    const calls = parse.mock.calls.length;
+    await prepareSkillBank('autocad', 'user-2');
+    expect(parse.mock.calls.length).toBe(calls);
   });
 
-  it('records a failure after the retry also fails, and does not call the API again soon after', async () => {
-    const { ensureSkillTest } = await import('@/lib/ai/skill-tests');
-    parse.mockResolvedValue(reply(null));
-    expect(await ensureSkillTest('AutoCAD', 'user-1')).toEqual({ ok: false, reason: 'generation_failed' });
-    expect(parse).toHaveBeenCalledTimes(2);
-    expect(db.state.gen).toMatchObject({ name_key: 'autocad', status: 'failed' });
-
-    expect(await ensureSkillTest('AutoCAD', 'user-2')).toEqual({ ok: false, reason: 'recently_failed' });
-    expect(parse).toHaveBeenCalledTimes(2);
-  });
-
-  it('fails without calling the API when no key is configured', async () => {
-    const { ensureSkillTest } = await import('@/lib/ai/skill-tests');
-    delete process.env.ANTHROPIC_API_KEY;
-    expect(await ensureSkillTest('AutoCAD', 'user-1')).toEqual({ ok: false, reason: 'generation_failed' });
+  it('only one job works on a skill at a time (lease)', async () => {
+    const { prepareSkillBank } = await import('@/lib/ai/skill-tests');
+    modelReplies();
+    db.state.claimHeld = true;
+    await prepareSkillBank('AutoCAD', 'user-1');
     expect(parse).not.toHaveBeenCalled();
   });
 
-  it('respects the per-user daily limit', async () => {
-    const { ensureSkillTest } = await import('@/lib/ai/skill-tests');
-    db.state.usage = 10; // default aiDailyCallsPerUser
-    expect(await ensureSkillTest('AutoCAD', 'user-1')).toEqual({ ok: false, reason: 'rate_limited' });
+  it('retries a bad batch once, then marks the skill failed (retried later, never a dead end)', async () => {
+    const { prepareSkillBank, skillTestStatuses } = await import('@/lib/ai/skill-tests');
+    parse.mockResolvedValue({ stop_reason: 'end_turn', parsed_output: null, usage: { input_tokens: 1, output_tokens: 1 } });
+    await prepareSkillBank('AutoCAD', 'user-1');
+    expect(parse).toHaveBeenCalledTimes(2);
+    expect((await skillTestStatuses(['AutoCAD'])).get('autocad')).toEqual({ state: 'failed' });
+  });
+
+  it('marks a skill failed without calling the API when no key is configured', async () => {
+    const { prepareSkillBank, skillTestStatuses } = await import('@/lib/ai/skill-tests');
+    delete process.env.ANTHROPIC_API_KEY;
+    await prepareSkillBank('AutoCAD', 'user-1');
+    expect(parse).not.toHaveBeenCalled();
+    expect((await skillTestStatuses(['AutoCAD'])).get('autocad')).toEqual({ state: 'failed' });
+  });
+
+  it("respects the candidate's daily limit for new skills", async () => {
+    const { prepareSkillBank } = await import('@/lib/ai/skill-tests');
+    modelReplies();
+    db.state.usage = 10;
+    await prepareSkillBank('AutoCAD', 'user-1');
     expect(parse).not.toHaveBeenCalled();
   });
 });

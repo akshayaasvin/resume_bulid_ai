@@ -3,12 +3,12 @@ import { AppHeader } from '@/components/AppHeader';
 import { BadgeChip, LevelChip } from '@/components/Badges';
 import { PendingSubmitter } from '@/components/PendingSubmitter';
 import { RunnerStatus } from '@/components/RunnerStatus';
-import { GenerateTestButton } from '@/components/test/GenerateTestButton';
+import { PendingTestsWatcher } from '@/components/test/PendingTestsWatcher';
 import { pluralKey } from '@/i18n';
 import { getT } from '@/i18n/server';
 import { requireSession } from '@/lib/auth';
 import { skillOverview, type SkillOverviewRow } from '@/lib/candidate-data';
-import { generationStatus } from '@/lib/ai/skill-tests';
+import { skillTestStatuses, type SkillTestStatus } from '@/lib/ai/skill-tests';
 import { STEP_HOME, requiredTests } from '@/lib/flow';
 import { syncFlowStep, testProgress } from '@/lib/flow-server';
 import { canonicalSkillName, normSkill } from '@/lib/skill-alias';
@@ -28,14 +28,18 @@ export default async function TestHub() {
   const completed = progress.completedTests;
   const required = requiredTests(progress);
   const unlocked = completed >= required || step === 'done';
-  // Declared skills whose AI test recently failed to generate: shown as "not available yet".
-  const failed = await generationStatus(declared.filter((r) => !r.testable).map((r) => normSkill(canonicalSkillName(r.name))));
-  const isUnavailable = (r: SkillOverviewRow) => !r.testable && failed.has(normSkill(canonicalSkillName(r.name)));
+  // Declared skills with no test yet: their question bank is generated in the background.
+  const untested = declared.filter((r) => !r.testable);
+  const statuses = await skillTestStatuses(untested.map((r) => r.name));
+  const bankState = (r: SkillOverviewRow): SkillTestStatus['state'] | null =>
+    r.testable ? null : statuses.get(normSkill(canonicalSkillName(r.name)))?.state ?? 'pending';
+  const watch = untested.filter((r) => bankState(r) !== 'not_testable').map((r) => r.name);
   const kinds = rows.filter((r) => r.slug === 'python' || r.slug === 'sql').map((r) => r.slug as 'python' | 'sql');
 
   return (
     <>
       <AppHeader signedIn home="/test" />
+      <PendingTestsWatcher skills={watch} />
       <main className="mx-auto max-w-2xl space-y-5 px-4 pb-28 pt-5">
         <div>
           <h1 className="text-2xl font-bold">{t('hub.title')}</h1>
@@ -67,7 +71,7 @@ export default async function TestHub() {
             </div>
           ) : (
             <ul className="space-y-2">
-              {declared.map((r) => <SkillRow key={r.name} r={r} t={t} unavailable={isUnavailable(r)} />)}
+              {declared.map((r) => <SkillRow key={r.name} r={r} t={t} bank={bankState(r)} />)}
             </ul>
           )}
         </section>
@@ -75,7 +79,7 @@ export default async function TestHub() {
         {extra.length > 0 && (
           <section>
             <h2 className="mb-2 text-lg font-semibold">{t('hub.extraTested')}</h2>
-            <ul className="space-y-2">{extra.map((r) => <SkillRow key={r.name} r={r} t={t} unavailable={false} />)}</ul>
+            <ul className="space-y-2">{extra.map((r) => <SkillRow key={r.name} r={r} t={t} bank={null} />)}</ul>
           </section>
         )}
 
@@ -115,8 +119,10 @@ export default async function TestHub() {
   );
 }
 
-function SkillRow({ r, t, unavailable }: {
-  r: SkillOverviewRow; t: (k: string, v?: Record<string, string | number>) => string; unavailable: boolean;
+function SkillRow({ r, t, bank }: {
+  r: SkillOverviewRow; t: (k: string, v?: Record<string, string | number>) => string;
+  /** Bank status for a skill without a test yet (null when the skill has a test). */
+  bank: SkillTestStatus['state'] | null;
 }) {
   return (
     <li className="card flex items-center justify-between gap-3">
@@ -130,21 +136,26 @@ function SkillRow({ r, t, unavailable }: {
             </>
           ) : r.score ? (
             <LevelChip level="needs_improvement" label={t('level.needs_improvement')} />
-          ) : unavailable ? (
-            <span className="text-xs text-slate-500">{t('hub.unavailable')}</span>
+          ) : bank === 'pending' ? (
+            <span className="flex items-center gap-1.5 text-xs text-brand-700" role="status">
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" aria-hidden />
+              {t('hub.bankPending')}
+            </span>
+          ) : bank === 'failed' ? (
+            <span className="text-xs text-slate-500">{t('hub.bankRetrying')}</span>
+          ) : bank === 'not_testable' ? (
+            <span className="text-xs text-slate-500">{t('hub.notTestable')}</span>
           ) : (
             <span className="text-xs text-slate-500">{t('dash.notTested')}</span>
           )}
           {r.kind && <span className="text-xs text-slate-500">· {t(`hub.kind.${r.kind}`)}</span>}
-          {(r.ai || (!r.testable && !unavailable)) && <span className="text-xs text-slate-500">· {t('hub.aiBadge')}</span>}
+          {r.ai && <span className="text-xs text-slate-500">· {t('hub.aiBadge')}</span>}
         </div>
       </div>
       {r.testable && r.slug ? (
         <Link href={`/test/${r.slug}`} className={r.score ? 'btn-secondary shrink-0 text-sm' : 'btn-primary shrink-0 text-sm'}>
           {r.score ? t('dash.retake') : t('test.start')}
         </Link>
-      ) : !r.testable && !unavailable ? (
-        <GenerateTestButton skill={r.name} />
       ) : null}
     </li>
   );

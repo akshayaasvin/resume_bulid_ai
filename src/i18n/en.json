@@ -167,12 +167,7 @@
   "hub.progress.other": "{done} of {total} tests done",
   "hub.remaining.one": "1 more test to unlock",
   "hub.remaining.other": "{n} more tests to unlock",
-  "hub.preparing": "Preparing your test…",
-  "hub.genFailed": "We couldn't prepare this test right now. Please try again later.",
-  "hub.genRateLimited": "You've prepared many tests today. Please try again tomorrow.",
-  "hub.genOffline": "You're offline. Connect to the internet to start this test.",
   "hub.notTestable": "We can't make a test for this skill.",
-  "hub.unavailable": "Test not available yet",
   "hub.fallback": "Tests for your skills are being prepared. You can see job matches now.",
   "hub.aiBadge": "AI-generated test",
   "wizard.awards": "Awards & certificates",
@@ -180,5 +175,7 @@
   "wizard.awardName": "Award / certificate name",
   "wizard.awardIssuer": "Issued by (optional)",
   "wizard.awardYear": "Year (optional)",
-  "wizard.addAward": "Add award / certificate"
+  "wizard.addAward": "Add award / certificate",
+  "hub.bankPending": "Ready in a minute — try another skill first",
+  "hub.bankRetrying": "Still preparing this test. We'll keep trying."
 }

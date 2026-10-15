@@ -2,7 +2,7 @@ import 'server-only';
 import { adminClient } from './supabase/admin';
 import { computeStep, isFlowStep, laterStep, type FlowStep } from './flow';
 import { canonicalSkillName, findCatalogSkill, normSkill } from './skill-alias';
-import { generationStatus } from './ai/skill-tests';
+import { skillTestStatuses } from './ai/skill-tests';
 
 /** Counts the candidate's tested skills and how many declared skills have / can get / can't get a test. */
 export async function testProgress(profileId: string) {
@@ -16,9 +16,12 @@ export async function testProgress(profileId: string) {
   const ids = new Set(cat.map((c) => c.id));
   const rows = (claimed ?? []) as { skill_id: string | null; name: string }[];
   const untested = rows.filter((c) => !((c.skill_id && ids.has(c.skill_id)) || findCatalogSkill(c.name, cat)));
-  const keys = untested.map((c) => normSkill(canonicalSkillName(c.name)));
-  const failed = await generationStatus(keys);
-  const unavailable = keys.filter((k) => failed.has(k)).length;
+  // Untested skills: 'pending' ones will get a bank in the background; failed / not-a-skill ones can't right now.
+  const statuses = await skillTestStatuses(untested.map((c) => c.name));
+  const unavailable = untested.filter((c) => {
+    const st = statuses.get(normSkill(canonicalSkillName(c.name)))?.state;
+    return st === 'failed' || st === 'not_testable';
+  }).length;
   return {
     completedTests: count ?? 0,
     testable: rows.length - untested.length,

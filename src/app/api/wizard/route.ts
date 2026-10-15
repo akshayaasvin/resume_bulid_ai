@@ -4,6 +4,10 @@ import { createResumeVersion } from '@/lib/resume/versions';
 import { track } from '@/lib/funnel';
 import { syncFlowStep } from '@/lib/flow-server';
 import { canonicalSkillName, findCatalogSkill, normSkill } from '@/lib/skill-alias';
+import { prepareInBackground } from '@/lib/ai/skill-tests';
+
+// Saving skills may start background question-bank generation (waitUntil), which shares this limit.
+export const maxDuration = 60;
 
 const year = z.coerce.number().int().min(1950).max(2100).nullable().optional();
 const text = (max: number) => z.string().trim().max(max);
@@ -118,6 +122,8 @@ export async function PUT(req: Request) {
         const { error } = await supabase.from('claimed_skills').insert(skills.map((s) => ({ ...s, profile_id: uid })));
         if (error) throw error;
       }
+      // Skills with no test yet: start building their question bank now, so it's ready by the test step.
+      prepareInBackground(skills.filter((s) => !s.skill_id || !(catalog ?? []).some((c) => c.id === s.skill_id)).map((s) => s.name), uid);
       if (body.summary !== undefined) {
         const { error } = await supabase.from('profiles').update({ summary: body.summary || null }).eq('id', uid);
         if (error) throw error;

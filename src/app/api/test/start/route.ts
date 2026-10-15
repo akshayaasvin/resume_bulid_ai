@@ -2,6 +2,9 @@ import { z } from 'zod';
 import { apiSession } from '@/lib/auth';
 import { startAttempt } from '@/lib/test-engine/service';
 import { deviceId, errorResponse } from '../_util';
+import { topUpInBackground } from '@/lib/ai/skill-tests';
+
+export const maxDuration = 60;
 
 const schema = z.object({
   skill: z.string().regex(/^[a-z0-9-]+$/).max(60),
@@ -24,6 +27,7 @@ export async function POST(req: Request) {
       mode: parsed.data.mode,
       pin: parsed.data.pin,
     });
+    topUpInBackground(parsed.data.skill);
     return Response.json(r);
   } catch (e) {
     return errorResponse(e);
