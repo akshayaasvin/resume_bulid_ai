@@ -20,9 +20,46 @@ export const SOFT_SKILLS = [
 ] as const;
 
 /** Technical skills grouped by domain. Names match the test catalogue where a test exists. */
-export const TECH_SKILL_GROUPS: { domain: 'software' | 'data' | 'design' | 'office' | 'engineering' | 'marketing'; skills: string[] }[] = [
+export type SkillDomain =
+  | 'software' | 'data' | 'ai_ml' | 'genai' | 'agents' | 'cloud' | 'security' | 'design' | 'office' | 'engineering' | 'marketing';
+export const TECH_SKILL_GROUPS: { domain: SkillDomain; skills: string[] }[] = [
   { domain: 'software', skills: ['Python', 'Java', 'JavaScript', 'HTML/CSS', 'C', 'C++', 'React', 'Git'] },
-  { domain: 'data', skills: ['SQL', 'Excel', 'Power BI', 'Tableau', 'Statistics'] },
+  {
+    domain: 'data',
+    skills: [
+      'SQL', 'Excel', 'Power BI', 'Tableau', 'Statistics',
+      'Pandas', 'NumPy', 'Matplotlib', 'Seaborn', 'Jupyter', 'R', 'Data Visualization', 'Data Cleaning', 'Big Data', 'Spark', 'MLOps',
+    ],
+  },
+  {
+    domain: 'ai_ml',
+    skills: ['Machine Learning', 'Deep Learning', 'TensorFlow', 'PyTorch', 'Scikit-learn', 'NLP', 'Computer Vision', 'Keras', 'OpenCV'],
+  },
+  {
+    domain: 'genai',
+    skills: [
+      'Generative AI', 'LLMs', 'Prompt Engineering', 'OpenAI API', 'Claude API', 'Gemini API', 'Hugging Face', 'LangChain',
+      'LlamaIndex', 'RAG', 'Vector Databases', 'Fine-tuning',
+    ],
+  },
+  {
+    domain: 'agents',
+    skills: [
+      'AI Agents', 'MCP (Model Context Protocol)', 'Agentic Workflows', 'CrewAI', 'LangGraph', 'n8n', 'Function Calling / Tool Use',
+      'Claude Code', 'Cursor', 'GitHub Copilot',
+    ],
+  },
+  {
+    domain: 'cloud',
+    skills: ['AWS', 'Azure', 'Google Cloud', 'Linux', 'Docker', 'Kubernetes', 'Terraform', 'CI/CD', 'Jenkins', 'GitHub Actions', 'Nginx'],
+  },
+  {
+    domain: 'security',
+    skills: [
+      'Network Security', 'Ethical Hacking', 'Penetration Testing', 'Kali Linux', 'Wireshark', 'Nmap', 'Burp Suite', 'SOC / SIEM',
+      'Cryptography', 'Firewalls', 'Web Security (OWASP)',
+    ],
+  },
   { domain: 'design', skills: ['Canva', 'Figma', 'Photoshop', 'Illustrator', 'Video editing'] },
   { domain: 'office', skills: ['MS Word', 'PowerPoint', 'Tally', 'Typing', 'Google Sheets'] },
   { domain: 'engineering', skills: ['AutoCAD', 'SolidWorks', 'CATIA', 'MATLAB', 'Revit', 'PLC'] },

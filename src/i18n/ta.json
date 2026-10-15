@@ -304,5 +304,10 @@
   "ob.lang.German": "ஜெர்மன்",
   "ob.lang.Japanese": "ஜப்பானியம்",
   "ob.lang.Arabic": "அரபு",
-  "ob.lang.Other": "மற்றவை"
+  "ob.lang.Other": "மற்றவை",
+  "ob.domain.ai_ml": "AI & இயந்திரக் கற்றல்",
+  "ob.domain.genai": "ஜெனரேட்டிவ் AI & LLM",
+  "ob.domain.agents": "AI ஏஜென்ட்கள் & MCP",
+  "ob.domain.cloud": "கிளவுட் & DevOps",
+  "ob.domain.security": "சைபர் பாதுகாப்பு"
 }

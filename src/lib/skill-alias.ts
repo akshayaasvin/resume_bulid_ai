@@ -11,6 +11,12 @@ const ALIASES: Record<string, string> = {
   'communication skills': 'Communication', 'english communication': 'Communication',
   'public speaking': 'Public Speaking', 'presentation skills': 'Public Speaking',
   'team work': 'Teamwork', 'team player': 'Teamwork',
+  ml: 'Machine Learning', dl: 'Deep Learning', 'gen ai': 'Generative AI', genai: 'Generative AI', llm: 'LLMs',
+  mcp: 'MCP (Model Context Protocol)', 'model context protocol': 'MCP (Model Context Protocol)',
+  'tool use': 'Function Calling / Tool Use', 'function calling': 'Function Calling / Tool Use',
+  gcp: 'Google Cloud', 'google cloud platform': 'Google Cloud', k8s: 'Kubernetes', 'ci cd': 'CI/CD', cicd: 'CI/CD',
+  owasp: 'Web Security (OWASP)', siem: 'SOC / SIEM', soc: 'SOC / SIEM', sklearn: 'Scikit-learn', 'scikit learn': 'Scikit-learn',
+  numpy: 'NumPy', 'data viz': 'Data Visualization', 'apache spark': 'Spark',
 };
 
 export const normSkill = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();

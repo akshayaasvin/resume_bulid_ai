@@ -304,5 +304,10 @@
   "ob.lang.German": "German",
   "ob.lang.Japanese": "Japanese",
   "ob.lang.Arabic": "Arabic",
-  "ob.lang.Other": "Other"
+  "ob.lang.Other": "Other",
+  "ob.domain.ai_ml": "AI & Machine Learning",
+  "ob.domain.genai": "Generative AI & LLM",
+  "ob.domain.agents": "AI Agents & MCP",
+  "ob.domain.cloud": "Cloud & DevOps",
+  "ob.domain.security": "Cybersecurity"
 }
