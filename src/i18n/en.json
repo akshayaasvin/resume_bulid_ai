@@ -267,5 +267,8 @@
   "resume.forRole": "Tailored for: {role}",
   "resume.changeRole": "Change role",
   "resume.tailoring": "Tailoring your resume for {role}…",
-  "resume.textVersion": "Text version (for screen readers)"
+  "resume.textVersion": "Text version (for screen readers)",
+  "whatsapp.toggle": "Send my test scores on WhatsApp",
+  "whatsapp.on": "On: you get a message after each test.",
+  "whatsapp.off": "Off: we won't send you WhatsApp messages."
 }

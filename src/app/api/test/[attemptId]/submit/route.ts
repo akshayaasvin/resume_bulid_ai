@@ -1,6 +1,7 @@
 import { apiSession } from '@/lib/auth';
 import { finalizeAttempt } from '@/lib/test-engine/service';
 import { syncFlowStep } from '@/lib/flow-server';
+import { notifySkillScoreInBackground } from '@/lib/whatsapp/notify';
 import { errorResponse, isUuid } from '../../_util';
 
 export const maxDuration = 30;
@@ -13,6 +14,8 @@ export async function POST(req: Request, { params }: { params: { attemptId: stri
   try {
     const result = await finalizeAttempt(params.attemptId, auth.session.profile.id, body?.answers);
     await syncFlowStep(auth.session.profile.id).catch((e) => console.error('flow sync failed', e));
+    // WhatsApp score update (opted-in only) after the response; never blocks or fails the submit.
+    if (!result.alreadySubmitted) notifySkillScoreInBackground(auth.session.profile.id, params.attemptId);
     return Response.json(result);
   } catch (e) {
     return errorResponse(e);

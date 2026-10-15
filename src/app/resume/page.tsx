@@ -4,6 +4,7 @@ import { RefreshWhile } from '@/components/RefreshWhile';
 import { ResumeStudio } from '@/components/resume/ResumeStudio';
 import { ResumeView } from '@/components/resume/ResumeView';
 import { ShowPctToggle } from '@/components/resume/ShowPctToggle';
+import { WhatsAppToggle } from '@/components/WhatsAppToggle';
 import { getT } from '@/i18n/server';
 import { requireSession } from '@/lib/auth';
 import type { ResumeSnapshot } from '@/lib/resume/snapshot';
@@ -61,6 +62,7 @@ export default async function ResumePage({ searchParams }: { searchParams: { v?:
               ))}
             </div>
             <ShowPctToggle initial={profile.show_score_pct} />
+            <WhatsAppToggle initial={profile.whatsapp_opt_in} />
             <ResumeStudio
               key={selected.version}
               version={selected.version}
