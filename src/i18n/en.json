@@ -155,5 +155,14 @@
   "hub.kind.situational": "Situation-based questions",
   "hub.kind.mcq": "MCQ + scenarios",
   "hub.backToTests": "Back to my tests",
-  "wizard.skillSuggest": "Did you mean:"
+  "wizard.skillSuggest": "Did you mean:",
+  "save.rejected": "Couldn't save. Please check the highlighted fields.",
+  "save.error": "Couldn't save right now. Please try again.",
+  "wizard.fixFields": "Please fix the highlighted fields.",
+  "wizard.finishOffline": "You're offline. Your answers are saved on this phone. Connect to the internet to finish.",
+  "wizard.err.required": "This field is required.",
+  "wizard.err.tooShort": "Enter at least 2 characters.",
+  "wizard.err.year": "Enter a 4-digit year ({min}–{max}).",
+  "wizard.err.yearOrder": "End year can't be before start year.",
+  "wizard.err.score": "Enter CGPA (0–10) or % (0–100)."
 }

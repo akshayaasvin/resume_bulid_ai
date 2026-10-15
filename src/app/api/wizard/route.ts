@@ -51,7 +51,11 @@ export async function PUT(req: Request) {
   const { supabase, user, profile } = auth.session;
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return Response.json({ error: 'invalid_input', issues: parsed.error.issues }, { status: 400 });
+  if (!parsed.success) {
+    // field paths + messages only (never the values) so rejected saves can be diagnosed from logs
+    console.warn('wizard save rejected', parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`));
+    return Response.json({ error: 'invalid_input', issues: parsed.error.issues }, { status: 400 });
+  }
   const body = parsed.data;
   const uid = user.id;
 

@@ -1,8 +1,11 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useT } from '@/i18n/client';
-import { useAutosave, type SaveState } from '@/lib/useAutosave';
+import { putJson, useAutosave, type SaveResult, type SaveState } from '@/lib/useAutosave';
+import {
+  EDU_FIELDS, educationValid, isBlankEducation, validateEducation, yearMax, type EduError, type EduField,
+} from '@/lib/education-validation';
 import { canonicalSkillName, findCatalogSkill, normSkill, suggestSkills } from '@/lib/skill-alias';
 import { RunnerStatus } from '../RunnerStatus';
 import type { RunnerKind } from '@/lib/runner/client';
@@ -26,17 +29,10 @@ const emptyExp = (): ExperienceRow => ({ id: uuid(), type: 'project', title: '',
 
 const SUGGESTED = ['MS Word', 'PowerPoint', 'Java', 'C', 'C++', 'HTML/CSS', 'JavaScript', 'Tally', 'Canva', 'AutoCAD', 'Teamwork', 'Public speaking'];
 
-async function put(body: unknown): Promise<{ ok: boolean; data?: { wizard_step: number } }> {
-  const res = await fetch('/api/wizard', {
-    method: 'PUT',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  return { ok: res.ok, data: res.ok ? await res.json() : undefined };
-}
+const put = (body: unknown) => putJson('/api/wizard', body);
 
-// Incomplete rows (e.g. a freshly added blank card) are not sent until filled in.
-const validEdu = (rows: EducationRow[]) => rows.filter((e) => e.institution.trim() && e.degree.trim());
+// Blank cards (e.g. a freshly added one) are not sent; filled cards must pass validation first.
+const validEdu = (rows: EducationRow[]) => rows.filter((e) => !isBlankEducation(e));
 const validExp = (rows: ExperienceRow[]) => rows.filter((e) => e.title.trim());
 const toYear = (v: string) => (v ? Number(v) : null);
 
@@ -47,14 +43,22 @@ function SaveBadge({ state }: { state: SaveState }) {
     saving: [t('common.saving'), 'text-slate-500'],
     saved: [t('common.saved'), 'text-green-700'],
     offline: [t('common.offlineSaved'), 'text-amber-700'],
-    error: [t('common.offlineSaved'), 'text-amber-700'],
+    rejected: [t('save.rejected'), 'text-red-600'],
+    error: [t('save.error'), 'text-red-600'],
   };
   const [label, cls] = map[state];
   return <span className={`text-xs ${cls}`} aria-live="polite">{label}</span>;
 }
 
-export function Wizard({ userId, initial, startStep, catalog, done }: {
-  userId: string; initial: WizardData; startStep: number; catalog: CatalogSkill[]; done: boolean;
+/** Inline error under a field (red), linked to the input via aria-describedby. */
+function FieldError({ id, code }: { id: string; code?: EduError }) {
+  const { t } = useT();
+  if (!code) return null;
+  return <p id={id} className="mt-1 text-xs text-red-600">{t(`wizard.err.${code}`, { min: 1970, max: yearMax() })}</p>;
+}
+
+export function Wizard({ userId, initial, startStep, wizardStep, catalog, done }: {
+  userId: string; initial: WizardData; startStep: number; wizardStep: number; catalog: CatalogSkill[]; done: boolean;
 }) {
   const { t } = useT();
   const router = useRouter();
@@ -68,9 +72,26 @@ export function Wizard({ userId, initial, startStep, catalog, done }: {
   const [summary, setSummary] = useState(initial.summary);
   const [custom, setCustom] = useState('');
 
-  const eduSave = useAutosave<EducationRow[]>(`wizard:${userId}:1`, async (rows) => (await put({ step: 1, education: validEdu(rows) })).ok);
-  const expSave = useAutosave<ExperienceRow[]>(`wizard:${userId}:2`, async (rows) => (await put({ step: 2, experience: validExp(rows) })).ok);
-  const skillSave = useAutosave<{ skills: SkillRow[]; summary: string }>(`wizard:${userId}:3`, async (d) => (await put({ step: 3, ...d })).ok);
+  // Steps the candidate has moved past. Sent with every background save so the server records
+  // progress even if the save that carried "Next" happened offline (the server never moves back).
+  const advanced = useRef(new Set<number>([1, 2, 3].filter((n) => n < wizardStep)));
+  const eduSave = useAutosave<EducationRow[]>(
+    `wizard:${userId}:1`,
+    (rows) => put({ step: 1, advance: advanced.current.has(1), education: validEdu(rows) }),
+    { canSave: (rows) => educationValid(rows) },
+  );
+  const expSave = useAutosave<ExperienceRow[]>(`wizard:${userId}:2`, (rows) => put({ step: 2, advance: advanced.current.has(2), experience: validExp(rows) }));
+  const skillSave = useAutosave<{ skills: SkillRow[]; summary: string }>(`wizard:${userId}:3`, (d) => put({ step: 3, ...d }));
+
+  // Inline validation for Education: shown once a field is left, or for everything after "Next".
+  const eduErrors = useMemo(() => education.map((e) => validateEducation(e)), [education]);
+  const [touched, setTouched] = useState<Set<string>>(new Set());
+  const [showAllEduErrors, setShowAllEduErrors] = useState(false);
+  const touch = (rowId: string, f: EduField) => setTouched((s) => (s.has(`${rowId}:${f}`) ? s : new Set(s).add(`${rowId}:${f}`)));
+  const eduError = (i: number, f: EduField) =>
+    showAllEduErrors || touched.has(`${education[i].id}:${f}`) ? eduErrors[i]?.[f] : undefined;
+  const fieldId = (rowId: string, f: EduField) => `edu-${rowId}-${f}`;
+  const invalidCls = (bad: unknown) => (bad ? ' border-red-500 focus:border-red-500 focus:ring-red-200' : '');
 
   // Restore unsynced drafts left on this phone (e.g. WiFi dropped before the save landed).
   useEffect(() => {
@@ -79,6 +100,14 @@ export function Wizard({ userId, initial, startStep, catalog, done }: {
     const s = skillSave.readDraft(); if (s) { setSkills(s.skills); setSummary(s.summary); skillSave.queue(s); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Retry anything still waiting (e.g. saved offline) whenever the candidate changes step.
+  const { flush: flushEdu } = eduSave;
+  const { flush: flushExp } = expSave;
+  const { flush: flushSkills } = skillSave;
+  useEffect(() => {
+    void flushEdu(); void flushExp(); void flushSkills();
+  }, [step, flushEdu, flushExp, flushSkills]);
 
   const runnerKinds = useMemo<RunnerKind[]>(() => {
     const slugs = new Set(skills.map((s) => catalog.find((c) => c.id === s.skill_id)?.slug ?? s.name.toLowerCase()));
@@ -116,37 +145,74 @@ export function Wizard({ userId, initial, startStep, catalog, done }: {
     return opts;
   }, [catalog, skills]);
 
+  const saveMessage = (r: SaveResult) =>
+    r === 'offline' ? t('wizard.finishOffline') : r === 'rejected' ? t('save.rejected') : t('save.error');
+
+  function goTo(n: number) {
+    setStep(n);
+    window.scrollTo({ top: 0 });
+  }
+
+  /** Focuses the first invalid Education field; returns false when the step is valid. */
+  function focusFirstEduError(): boolean {
+    for (let i = 0; i < education.length; i++) {
+      const f = EDU_FIELDS.find((k) => eduErrors[i]?.[k]);
+      if (f) {
+        const el = document.getElementById(fieldId(education[i].id, f));
+        el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        el?.focus({ preventScroll: true });
+        return true;
+      }
+    }
+    return false;
+  }
+
   async function advance() {
     setError(null);
+    // Steps 1-2: validate, keep a copy on the phone, move on at once; the server save runs in the background.
+    if (step === 1) {
+      if (focusFirstEduError()) {
+        setShowAllEduErrors(true);
+        setError(t('wizard.fixFields'));
+        return;
+      }
+      advanced.current.add(1);
+      eduSave.queue(education);
+      void eduSave.flush();
+      goTo(2);
+      return;
+    }
+    if (step === 2) {
+      advanced.current.add(2);
+      expSave.queue(experience);
+      void expSave.flush();
+      goTo(3);
+      return;
+    }
+    // Step 3 finishes the profile: the next page is server-gated, so this one must reach the server.
     setBusy(true);
     try {
-      let res;
-      if (step === 1) {
-        await eduSave.flush();
-        res = await put({ step: 1, advance: true, education: validEdu(education) });
-      } else if (step === 2) {
-        await expSave.flush();
-        res = await put({ step: 2, advance: true, experience: validExp(experience) });
-      } else {
-        await skillSave.flush();
-        res = await put({ step: 3, advance: true, skills, summary });
+      // Re-send every section (not just pending ones) so an earlier failed background save can't be skipped.
+      eduSave.queue(education);
+      expSave.queue(experience);
+      skillSave.queue({ skills, summary });
+      for (const pending of [eduSave.flush, expSave.flush, skillSave.flush]) {
+        const r = await pending();
+        if (r && r !== 'ok') { setError(saveMessage(r)); return; }
       }
-      if (!res.ok) throw new Error('save failed');
-      if (step < 3) {
-        setStep(step + 1);
-        window.scrollTo({ top: 0 });
-      } else {
-        router.push('/test');
-        router.refresh();
-      }
-    } catch {
-      setError(t('common.offlineSaved'));
+      const r = await put({ step: 3, advance: true, skills, summary });
+      if (r !== 'ok') { setError(saveMessage(r)); return; }
+      router.push('/test');
+      router.refresh();
     } finally {
       setBusy(false);
     }
   }
 
-  const saveState = step === 1 ? eduSave.state : step === 2 ? expSave.state : skillSave.state;
+  // Background saves from earlier steps still matter (e.g. Education saved offline while on step 2).
+  const allStates = [eduSave.state, expSave.state, skillSave.state];
+  const saveState: SaveState = (['rejected', 'error', 'offline'] as const).find((s) => allStates.includes(s))
+    ?? (step === 1 ? eduSave.state : step === 2 ? expSave.state : skillSave.state);
   const titles = ['wizard.education', 'wizard.experience', 'wizard.skills'];
 
   return (
@@ -171,15 +237,21 @@ export function Wizard({ userId, initial, startStep, catalog, done }: {
           {education.map((e, i) => (
             <fieldset key={e.id} className="card space-y-3">
               <div>
-                <label className="label">{t('wizard.institution')}</label>
-                <input className="input" value={e.institution} maxLength={200}
+                <label className="label" htmlFor={fieldId(e.id, 'institution')}>{t('wizard.institution')}</label>
+                <input id={fieldId(e.id, 'institution')} className={`input${invalidCls(eduError(i, 'institution'))}`} value={e.institution} maxLength={200}
+                  aria-invalid={!!eduError(i, 'institution')} aria-describedby={`${fieldId(e.id, 'institution')}-err`}
+                  onBlur={() => touch(e.id, 'institution')}
                   onChange={(ev) => updEdu(education.map((x, j) => (j === i ? { ...x, institution: ev.target.value } : x)))} />
+                <FieldError id={`${fieldId(e.id, 'institution')}-err`} code={eduError(i, 'institution')} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="label">{t('wizard.degree')}</label>
-                  <input className="input" value={e.degree} maxLength={120} placeholder="B.E. / 12th"
+                  <label className="label" htmlFor={fieldId(e.id, 'degree')}>{t('wizard.degree')}</label>
+                  <input id={fieldId(e.id, 'degree')} className={`input${invalidCls(eduError(i, 'degree'))}`} value={e.degree} maxLength={120} placeholder="B.E. / 12th"
+                    aria-invalid={!!eduError(i, 'degree')} aria-describedby={`${fieldId(e.id, 'degree')}-err`}
+                    onBlur={() => touch(e.id, 'degree')}
                     onChange={(ev) => updEdu(education.map((x, j) => (j === i ? { ...x, degree: ev.target.value } : x)))} />
+                  <FieldError id={`${fieldId(e.id, 'degree')}-err`} code={eduError(i, 'degree')} />
                 </div>
                 <div>
                   <label className="label">{t('wizard.field')}</label>
@@ -189,19 +261,31 @@ export function Wizard({ userId, initial, startStep, catalog, done }: {
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="label">{t('wizard.startYear')}</label>
-                  <input className="input" inputMode="numeric" maxLength={4} value={e.start_year ?? ''}
+                  <label className="label" htmlFor={fieldId(e.id, 'start_year')}>{t('wizard.startYear')}</label>
+                  <input id={fieldId(e.id, 'start_year')} className={`input${invalidCls(eduError(i, 'start_year'))}`}
+                    inputMode="numeric" pattern="[0-9]*" maxLength={4} value={e.start_year ?? ''}
+                    aria-invalid={!!eduError(i, 'start_year')} aria-describedby={`${fieldId(e.id, 'start_year')}-err`}
+                    onBlur={() => touch(e.id, 'start_year')}
                     onChange={(ev) => updEdu(education.map((x, j) => (j === i ? { ...x, start_year: toYear(ev.target.value.replace(/\D/g, '')) } : x)))} />
+                  <FieldError id={`${fieldId(e.id, 'start_year')}-err`} code={eduError(i, 'start_year')} />
                 </div>
                 <div>
-                  <label className="label">{t('wizard.endYear')}</label>
-                  <input className="input" inputMode="numeric" maxLength={4} value={e.end_year ?? ''}
+                  <label className="label" htmlFor={fieldId(e.id, 'end_year')}>{t('wizard.endYear')}</label>
+                  <input id={fieldId(e.id, 'end_year')} className={`input${invalidCls(eduError(i, 'end_year'))}`}
+                    inputMode="numeric" pattern="[0-9]*" maxLength={4} value={e.end_year ?? ''}
+                    aria-invalid={!!eduError(i, 'end_year')} aria-describedby={`${fieldId(e.id, 'end_year')}-err`}
+                    onBlur={() => touch(e.id, 'end_year')}
                     onChange={(ev) => updEdu(education.map((x, j) => (j === i ? { ...x, end_year: toYear(ev.target.value.replace(/\D/g, '')) } : x)))} />
+                  <FieldError id={`${fieldId(e.id, 'end_year')}-err`} code={eduError(i, 'end_year')} />
                 </div>
                 <div>
-                  <label className="label">{t('wizard.score')}</label>
-                  <input className="input" value={e.score ?? ''} maxLength={20}
-                    onChange={(ev) => updEdu(education.map((x, j) => (j === i ? { ...x, score: ev.target.value } : x)))} />
+                  <label className="label" htmlFor={fieldId(e.id, 'score')}>{t('wizard.score')}</label>
+                  <input id={fieldId(e.id, 'score')} className={`input${invalidCls(eduError(i, 'score'))}`}
+                    inputMode="decimal" maxLength={7} value={e.score ?? ''}
+                    aria-invalid={!!eduError(i, 'score')} aria-describedby={`${fieldId(e.id, 'score')}-err`}
+                    onBlur={() => touch(e.id, 'score')}
+                    onChange={(ev) => updEdu(education.map((x, j) => (j === i ? { ...x, score: ev.target.value.replace(/[^0-9.%]/g, '') } : x)))} />
+                  <FieldError id={`${fieldId(e.id, 'score')}-err`} code={eduError(i, 'score')} />
                 </div>
               </div>
               {education.length > 1 && (
@@ -321,7 +405,7 @@ export function Wizard({ userId, initial, startStep, catalog, done }: {
         </div>
       )}
 
-      {error && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{error}</p>}
+      {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200 bg-white p-3">
         <div className="mx-auto flex max-w-2xl gap-3">

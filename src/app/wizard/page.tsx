@@ -31,6 +31,7 @@ export default async function WizardPage({ searchParams }: { searchParams: { ste
           userId={user.id}
           initial={initial}
           startStep={startStep}
+          wizardStep={profile.wizard_step}
           catalog={(skills ?? []) as { id: string; slug: string; name: string; category: string }[]}
           done={profile.wizard_step >= 4}
         />
