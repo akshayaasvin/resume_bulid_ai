@@ -279,7 +279,7 @@
   "privacy.use.title": "How we use it",
   "privacy.use.body": "To build your resume, run and score your skill tests, suggest job roles that fit you, and show your progress to your college's placement team if you joined through your college. AI is used to prepare test questions and to tailor your resume wording; it only uses the details you entered.",
   "privacy.whatsapp.title": "WhatsApp messages",
-  "privacy.whatsapp.body": "By creating an account you agree that we send your test results, skill scores, resume link and job or training alerts to your WhatsApp number. Scores below 50% are never shown in these messages.\nTo stop them, reply STOP to any of our messages, or turn off WhatsApp updates on your resume page.",
+  "privacy.whatsapp.body": "By creating an account you agree that we send your test results, skill scores, resume link and job or training alerts to your WhatsApp number. Scores below 50% are never shown in these messages.\nTo stop them, turn off \"Send my test scores on WhatsApp\" on your resume page. You can turn it back on at any time.",
   "privacy.sharing.title": "Who we share it with",
   "privacy.sharing.body": "We do not sell your data. It is stored with our hosting and database providers, sent to our AI provider only to prepare tests and resume text, and sent to our WhatsApp provider only to deliver your messages. If you joined through your college, its placement team can see your profile, scores and resume.",
   "privacy.rights.title": "Your choices",
