@@ -18,6 +18,10 @@ export interface ResumeSnapshot {
   otherSkills: string[];
   /** Awards & certificates. Absent on older snapshots. */
   awards?: { name: string; issuer: string | null; year: number | null }[];
+  /** Soft skills from onboarding ("Strengths"). Absent on older snapshots. */
+  softSkills?: string[];
+  /** Spoken languages from onboarding. Absent on older snapshots. */
+  languages?: { name: string; level: string }[];
   generatedAt: string;
 }
 
@@ -25,6 +29,7 @@ export interface SnapshotInput {
   profile: {
     full_name: string; name_tamil: string | null; phone_whatsapp: string | null; email: string | null;
     department: string | null; year: number | null; summary: string | null;
+    soft_skills?: string[] | null; english_level?: string | null; tamil_level?: string | null;
   };
   college: string | null;
   education: { institution: string; degree: string; field: string | null; start_year: number | null; end_year: number | null; score: string | null; sort: number }[];
@@ -46,6 +51,8 @@ export function headerLines(s: Pick<ResumeSnapshot, 'name' | 'nameTamil' | 'head
   const nameTamil = keep(s.nameTamil);
   return { headline, nameTamil: nameTamil && headline && sameText(nameTamil, headline) ? null : nameTamil };
 }
+
+const LANG_LEVEL: Record<string, string> = { basic: 'Basic', intermediate: 'Intermediate', fluent: 'Fluent' };
 
 const BADGE_ORDER: Record<Badge, number> = { campus_verified: 0, verified: 1, self: 2 };
 
@@ -98,6 +105,11 @@ export function buildSnapshot(input: SnapshotInput, cfg: ScoringConfig, now = ne
     verifiedSkills,
     otherSkills,
     awards: [...(input.awards ?? [])].sort((a, b) => a.sort - b.sort).map(({ name, issuer, year }) => ({ name, issuer, year })),
+    softSkills: input.profile.soft_skills ?? [],
+    languages: [
+      ...(input.profile.english_level ? [{ name: 'English', level: LANG_LEVEL[input.profile.english_level] ?? input.profile.english_level }] : []),
+      ...(input.profile.tamil_level ? [{ name: 'Tamil', level: LANG_LEVEL[input.profile.tamil_level] ?? input.profile.tamil_level }] : []),
+    ],
     generatedAt: now.toISOString(),
   };
 }
